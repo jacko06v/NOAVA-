@@ -40,19 +40,31 @@ module.exports = {
     compilers: [
       {
         version: "0.5.6",
-      },
-      {
-        version: "0.6.6",
-      },
-      {
-        version: "0.8.4",
         settings: {
-           optimizer: {
-               enabled: true,
-               runs: 1000,
-           },
-        },
+          optimizer: {
+              enabled: true,
+              runs: 1000,
+          },
       },
+    },
+      {
+        version: "0.6.12",
+        settings: {
+          optimizer: {
+              enabled: true,
+              runs: 1000,
+          },
+      },
+    },
+    {
+      version: "0.6.6",
+      settings: {
+        optimizer: {
+            enabled: true,
+            runs: 1000,
+        },
+    },
+  },
     ], 
   },
   etherscan: {
@@ -65,7 +77,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
+        url: `https://autumn-crimson-sun.bsc.quiknode.pro/ee6b7517d86a347cffbf8bfcef1339e5a1cc28cf/`,
       },
     },
     "matic-mumbai": {

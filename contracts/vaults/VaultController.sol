@@ -36,7 +36,7 @@ pragma experimental ABIEncoderV2;
 
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/BEP20.sol";
-
+import "hardhat/console.sol";
 import "../interfaces/IPancakeRouter02.sol";
 import "../interfaces/IPancakePair.sol";
 import "../interfaces/IStrategy.sol";
@@ -46,18 +46,21 @@ import "../interfaces/IBunnyChef.sol";
 import "../library/PausableUpgradeable.sol";
 import "../library/WhitelistUpgradeable.sol";
 
-
-abstract contract VaultController is IVaultController, PausableUpgradeable, WhitelistUpgradeable {
+abstract contract VaultController is
+    IVaultController,
+    PausableUpgradeable,
+    WhitelistUpgradeable
+{
     using SafeBEP20 for IBEP20;
 
     /* ========== CONSTANT VARIABLES ========== */
-    BEP20 private constant BUNNY = BEP20(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51);
+    BEP20 private BUNNY = BEP20(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51);
 
     /* ========== STATE VARIABLES ========== */
 
     address public keeper;
     IBEP20 internal _stakingToken;
-    IBunnyMinterV2 internal _minter;
+    IBunnyMinterV2 public _minter;
     IBunnyChef internal _bunnyChef;
 
     /* ========== VARIABLE GAP ========== */
@@ -66,13 +69,15 @@ abstract contract VaultController is IVaultController, PausableUpgradeable, Whit
 
     /* ========== Event ========== */
 
-    event Recovered(address token, uint amount);
-
+    event Recovered(address token, uint256 amount);
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyKeeper {
-        require(msg.sender == keeper || msg.sender == owner(), 'VaultController: caller is not the owner or keeper');
+    modifier onlyKeeper() {
+        require(
+            msg.sender == keeper || msg.sender == owner(),
+            "VaultController: caller is not the owner or keeper"
+        );
         _;
     }
 
@@ -80,10 +85,15 @@ abstract contract VaultController is IVaultController, PausableUpgradeable, Whit
 
     function __VaultController_init(IBEP20 token) internal initializer {
         __PausableUpgradeable_init();
+
         __WhitelistUpgradeable_init();
 
         keeper = 0x793074D9799DC3c6039F8056F1Ba884a73462051;
         _stakingToken = token;
+    }
+
+    function setToken(BEP20 _token) public onlyOwner {
+        BUNNY = _token;
     }
 
     /* ========== VIEWS FUNCTIONS ========== */
@@ -93,7 +103,8 @@ abstract contract VaultController is IVaultController, PausableUpgradeable, Whit
     }
 
     function canMint() internal view returns (bool) {
-        return address(_minter) != address(0) && _minter.isMinter(address(this));
+        return
+            address(_minter) != address(0) && _minter.isMinter(address(this));
     }
 
     function bunnyChef() external view override returns (address) {
@@ -107,30 +118,50 @@ abstract contract VaultController is IVaultController, PausableUpgradeable, Whit
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function setKeeper(address _keeper) external onlyKeeper {
-        require(_keeper != address(0), 'VaultController: invalid keeper address');
+        require(
+            _keeper != address(0),
+            "VaultController: invalid keeper address"
+        );
         keeper = _keeper;
     }
 
-    function setMinter(address newMinter) virtual public onlyOwner {
+    function setMinter(address newMinter) public virtual onlyOwner {
         // can zero
         if (newMinter != address(0)) {
-            require(newMinter == BUNNY.getOwner(), 'VaultController: not bunny minter');
+            require(
+                newMinter == BUNNY.getOwner(),
+                "VaultController: not bunny minter"
+            );
+
             _stakingToken.safeApprove(newMinter, 0);
-            _stakingToken.safeApprove(newMinter, uint(- 1));
+
+            _stakingToken.safeApprove(newMinter, uint256(-1));
         }
-        if (address(_minter) != address(0)) _stakingToken.safeApprove(address(_minter), 0);
+        if (address(_minter) != address(0))
+            _stakingToken.safeApprove(address(_minter), 0);
+
         _minter = IBunnyMinterV2(newMinter);
     }
 
-    function setBunnyChef(IBunnyChef newBunnyChef) virtual public onlyOwner {
-        require(address(_bunnyChef) == address(0), 'VaultController: setBunnyChef only once');
+    function setBunnyChef(IBunnyChef newBunnyChef) public virtual onlyOwner {
+        require(
+            address(_bunnyChef) == address(0),
+            "VaultController: setBunnyChef only once"
+        );
         _bunnyChef = newBunnyChef;
     }
 
     /* ========== SALVAGE PURPOSE ONLY ========== */
 
-    function recoverToken(address _token, uint amount) virtual external onlyOwner {
-        require(_token != address(_stakingToken), 'VaultController: cannot recover underlying token');
+    function recoverToken(address _token, uint256 amount)
+        external
+        virtual
+        onlyOwner
+    {
+        require(
+            _token != address(_stakingToken),
+            "VaultController: cannot recover underlying token"
+        );
         IBEP20(_token).safeTransfer(owner(), amount);
 
         emit Recovered(_token, amount);
