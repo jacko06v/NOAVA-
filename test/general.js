@@ -37,14 +37,20 @@ describe("OVRLand Renting - TEST", () => {
   let Chef, chef;
   let Minter, minter;
   let Cake2cake, cake2cake;
+  let Zap, zap;
 
   let Token, token;
+  let wbnbAddr = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"
   let cakeAddr = "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82"
   let routerAddr = "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+  let factoryAddr = "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73"
   const provider = ethers.getDefaultProvider();
+  let pair;
   let owner;
   let cake;
+  let factory;
   let router;
+  let Safeswap, safeswap
 
   let initialTotalSupply;
   let currentBlock;
@@ -56,6 +62,9 @@ describe("OVRLand Renting - TEST", () => {
     Pricecal = await ethers.getContractFactory("PriceCalculatorBSC");
     Chef = await ethers.getContractFactory("BunnyChef");
     Minter = await ethers.getContractFactory("BunnyMinterV2");
+    Safeswap = await ethers.getContractFactory("safeSwapBNB");
+    Zap = await ethers.getContractFactory("ZapBSC");
+    pair =  await ethers.getContractFactory("PancakePair1");
     [
       owner, // 50 ether
       addr1, // 0
@@ -91,7 +100,40 @@ describe("OVRLand Renting - TEST", () => {
       token = await Token.deploy();
       await token.deployed();
         console.debug(`\t\t\tToken Contract Address: ${cyan}`, token.address);
+       
+        await token.minare(owner.address, web3.utils.toWei("10000", 'ether'))
+        console.debug(`\t\t\tToken owner balance: ${cyan}`, await token.balanceOf(owner.address));
+        const supply = await token.totalSupply()
+        console.debug(`\t\t\tToken totalSupply: ${yellow}`, supply);
     });
+
+    it("Should create factory", async () => {
+      factory = await hre.ethers.getContractAt("PancakeFactory", factoryAddr);
+      
+    });
+    it("deploy price calc", async () => {
+      pricecal = await Pricecal.deploy();
+      await pricecal.deployed();
+      console.debug(`\t\t\tpricecal Contract Address: ${cyan}`, pricecal.address);
+      await pricecal.initialize(token.address)
+  
+      await  pricecal.setTokenFeed(cakeAddr, "0xB6064eD41d4f67e353768aA239cA86f4F73665a1")
+      await  pricecal.setTokenFeed("0x0000000000000000000000000000000000000000", "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE")
+      await  pricecal.setTokenFeed("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE")
+  });
+    
+    it("deploy safeswapBNB", async () => {
+      safeswap = await Safeswap.deploy();
+      await safeswap.deployed();
+      console.debug(`\t\t\tsafeswap Contract Address: ${cyan}`, safeswap.address);
+  });
+  it("deploy zap", async () => {
+    zap = await Zap.deploy();
+    await zap.deployed();
+    console.debug(`\t\t\tzap Contract Address: ${cyan}`, zap.address);
+    await zap.initialize(token.address);
+    await zap.setSafeSwapBNB(safeswap.address);
+});
     it("deploy minter", async () => {
         minter = await Minter.deploy();
         await minter.deployed();
@@ -104,8 +146,10 @@ describe("OVRLand Renting - TEST", () => {
       cake2cake = await Cake2cake.deploy();
       await cake2cake.deployed();
       console.debug(`\t\t\tcake2cake Contract Address: ${cyan}`, cake2cake.address);
-      await minter.initialize(token.address)
+      await minter.initialize(token.address, zap.address, pricecal.address)
       console.debug(`\t\t\tMinter ${cyan} initialized`);
+      const token1 = await minter.BUNNY();
+      console.debug(`\t\t\tMinter ${cyan} initialized`, token1);
       const owner = await minter.owner();
       console.debug(`\t\t\tMinter ${cyan} initialized`, owner);
      await cake2cake.initialize(minter.address, token.address) 
@@ -125,11 +169,58 @@ describe("OVRLand Renting - TEST", () => {
 }); */
   });
 
-  describe("create contract", () => {
+  describe("create contract and add liq", () => {
     it("should create ovr and uniswap contract", async () => {
       cake = await hre.ethers.getContractAt("CakeToken", cakeAddr);
 
       router = await hre.ethers.getContractAt("PancakeRouter", routerAddr);
+    });
+    it("should add liq", async () => {
+      
+      await token.approve(router.address, web3.utils.toWei("10000", 'ether'));
+
+     console.log("--------------------------")
+      
+      await router.addLiquidityETH(token.address, web3.utils.toWei("1000", 'ether'), web3.utils.toWei("1000", 'ether'), web3.utils.toWei("1", 'ether'), owner.address, Math.floor(Date.now() / 1000) + 60 * 10,
+        { value: web3.utils.toWei("1", 'ether') }
+      
+      ); 
+
+      const tokenAddr =  token.address;
+      console.debug(`\t\t\ttokenaddr: ${yellow}`, tokenAddr);
+      console.debug(`\t\t\twbnbaddr: ${yellow}`, wbnbAddr);
+     const pairAddr = await factory.getPair(wbnbAddr, tokenAddr)
+     console.debug(`\t\t\tpair: ${yellow}`, pairAddr);
+     const Pair = await hre.ethers.getContractAt("PancakePair1", pairAddr); 
+     const balance = await Pair.balanceOf(owner.address);
+     console.debug(`\t\t\tpair balance: ${yellow}`, balance);
+      const reserve = await Pair.getReserves()
+      console.debug(`\t\t\tpair reserves 0: ${yellow}`,reserve[0]);
+      console.debug(`\t\t\tpair reserves 1: ${yellow}`,reserve[1]);
+
+
+     const price =  await pricecal.priceOfBunny()
+     console.debug(`\t\t\tPRICE: ${yellow}`, price);
+
+     console.log("---------------------------")
+     let path = ["0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", token.address];
+    const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
+    await router.swapExactETHForTokens(0, path, owner.address, deadline, { value: web3.utils.toWei("1", "ether") });
+    const balanceto = await token.balanceOf(owner.address);
+    console.debug(`\t\t\t Token owner balance: ${cyan}`, balanceto);
+    console.log("---------------------------")
+
+    const reserve1 = await Pair.getReserves()
+    console.debug(`\t\t\tpair reserves 0: ${yellow}`,reserve1[0]);
+      console.debug(`\t\t\tpair reserves 1: ${yellow}`,reserve1[1]);
+
+
+   const price2 =  await pricecal.priceOfBunny()
+   console.debug(`\t\t\tPRICE: ${yellow}`, price2);
+
+      
+     
+      
     });
   });
   describe("buy", () => {
@@ -200,7 +291,7 @@ describe("allowance", () => {
     console.debug("\t\t\tOWNER cake Balance:", ovrBalance.toString());
     console.debug("\t\t\tOWNER token Balance:", tokenBalance.toString());
     console.debug("\t\t\tOWNER earned Balance:", earned.toString());
-    await time.increase(DAY * 30);
+    await time.increase(DAY * 50);
     });
     it("earned", async () => {
      

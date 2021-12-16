@@ -262,7 +262,15 @@ contract VaultCakeToCake is VaultController, IStrategy {
         console.log("3.2");
         address minter = address(_minter);
         console.log(minter);
-        uint256 performanceFee = canMint() ? _minter.performanceFee(amount) : 0;
+        uint256 performanceFee;
+        if (canMint()) {
+            console.log("if true");
+            performanceFee = _minter.performanceFee(amount);
+        } else {
+            console.log("if false");
+            performanceFee = 0;
+        }
+        // uint256 performanceFee = canMint() ? _minter.performanceFee(amount) : 0;
 
         console.log(performanceFee);
         if (performanceFee > DUST) {

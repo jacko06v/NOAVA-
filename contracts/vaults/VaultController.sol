@@ -103,6 +103,7 @@ abstract contract VaultController is
     }
 
     function canMint() internal view returns (bool) {
+        console.log("can mint");
         return
             address(_minter) != address(0) && _minter.isMinter(address(this));
     }
