@@ -3,36 +3,29 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
-
-*
-* MIT License
-* ===========
-*
-* Copyright (c) 2020 BunnyFinance
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in all
-* copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-* SOFTWARE.
-*/
+ *
+ * MIT License
+ * ===========
+ *
+ * Copyright (c) 2021 DotFinance
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ */
 
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -49,75 +42,39 @@ contract PriceCalculatorBSC is IPriceCalculator, OwnableUpgradeable {
 
     address public constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     address public constant CAKE = 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82;
-    address public BUNNY;
-    address public constant VAI = 0x4BD17003473389A42DAF6a0a729f6Fdb328BbBd7;
     address public constant BUSD = 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56;
-
-    address public constant BUNNY_BNB_V1 =
-        0x7Bb89460599Dbf32ee3Aa50798BBcEae2A5F7f6a;
-    address public constant BUNNY_BNB_V2 =
-        0x5aFEf8567414F29f0f927A0F2787b188624c10E2;
 
     IPancakeFactory private constant factory =
         IPancakeFactory(0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73);
 
     /* ========== STATE VARIABLES ========== */
 
+    address public pinkToken;
+    address public pinkBNB;
     mapping(address => address) private pairTokens;
     mapping(address => address) private tokenFeeds;
-    mapping(address => ReferenceData) public references;
-
-    address public keeper;
-
-    /* ========== MODIFIERS ========== */
-
-    modifier onlyKeeper() {
-        require(
-            msg.sender == keeper || msg.sender == owner(),
-            "Qore: caller is not the owner or keeper"
-        );
-        _;
-    }
 
     /* ========== INITIALIZER ========== */
 
-    function initialize(address _token) external initializer {
+    function initialize(address _token, address _pair) external initializer {
+        require(address(_token) != address(0), "address 0");
+        pinkToken = _token;
+        require(_pair != address(0), "address 0");
+        pinkBNB = _pair;
         __Ownable_init();
-        setPairToken(VAI, BUSD);
-        BUNNY = _token;
     }
 
-    /* ========== RESTRICTED FUNCTIONS ========== */
+    /* ========== Restricted Operation ========== */
 
-    function setKeeper(address _keeper) external onlyKeeper {
-        require(
-            _keeper != address(0),
-            "PriceCalculatorBSC: invalid keeper address"
-        );
-        keeper = _keeper;
-    }
-
-    function setPairToken(address asset, address pairToken) public onlyKeeper {
+    function setPairToken(address asset, address pairToken) public onlyOwner {
         pairTokens[asset] = pairToken;
     }
 
-    function setTokenFeed(address asset, address feed) public onlyKeeper {
+    function setTokenFeed(address asset, address feed) public onlyOwner {
         tokenFeeds[asset] = feed;
     }
 
-    function setPrices(address[] memory assets, uint256[] memory prices)
-        external
-        onlyKeeper
-    {
-        for (uint256 i = 0; i < assets.length; i++) {
-            references[assets[i]] = ReferenceData({
-                lastData: prices[i],
-                lastUpdated: block.timestamp
-            });
-        }
-    }
-
-    /* ========== VIEWS ========== */
+    /* ========== Value Calculation ========== */
 
     function priceOfBNB() public view override returns (uint256) {
         (, int256 price, , , ) = AggregatorV3Interface(tokenFeeds[WBNB])
@@ -125,20 +82,19 @@ contract PriceCalculatorBSC is IPriceCalculator, OwnableUpgradeable {
         return uint256(price).mul(1e10);
     }
 
-    function priceOfCake() public view returns (uint256) {
+    function priceOfCake() external view returns (uint256) {
         (, int256 price, , , ) = AggregatorV3Interface(tokenFeeds[CAKE])
             .latestRoundData();
         return uint256(price).mul(1e10);
     }
 
-    function priceOfBunny() public view override returns (uint256) {
-        /*  (, uint256 price) = valueOfAsset(BUNNY, 1e18);
-        return price; */
-        return 3000000000000000000;
+    function priceOfBunny() external view override returns (uint256) {
+        (, uint256 pinkPriceInUSD) = valueOfAsset(pinkToken, 1e18);
+        return pinkPriceInUSD;
     }
 
     function pricesInUSD(address[] memory assets)
-        public
+        external
         view
         override
         returns (uint256[] memory)
@@ -158,7 +114,9 @@ contract PriceCalculatorBSC is IPriceCalculator, OwnableUpgradeable {
         returns (uint256 valueInBNB, uint256 valueInUSD)
     {
         if (asset == address(0) || asset == WBNB) {
-            return _oracleValueOf(asset, amount);
+            return _oracleValueOf(WBNB, amount);
+        } else if (asset == pinkToken || asset == pinkBNB) {
+            return _unsafeValueOfAsset(asset, amount);
         } else if (
             keccak256(abi.encodePacked(IPancakePair(asset).symbol())) ==
             keccak256("Cake-LP")
@@ -169,14 +127,46 @@ contract PriceCalculatorBSC is IPriceCalculator, OwnableUpgradeable {
         }
     }
 
-    function unsafeValueOfAsset(address asset, uint256 amount)
-        public
+    function _oracleValueOf(address asset, uint256 amount)
+        private
         view
         returns (uint256 valueInBNB, uint256 valueInUSD)
     {
-        valueInBNB = 0;
-        valueInUSD = 0;
+        (, int256 price, , , ) = AggregatorV3Interface(tokenFeeds[asset])
+            .latestRoundData();
+        valueInUSD = uint256(price).mul(1e10).mul(amount).div(1e18);
+        valueInBNB = valueInUSD.mul(1e18).div(priceOfBNB());
+    }
 
+    function _getPairPrice(address pair, uint256 amount)
+        private
+        view
+        returns (uint256 valueInBNB, uint256 valueInUSD)
+    {
+        address token0 = IPancakePair(pair).token0();
+        address token1 = IPancakePair(pair).token1();
+        uint256 totalSupply = IPancakePair(pair).totalSupply();
+        (uint256 r0, uint256 r1, ) = IPancakePair(pair).getReserves();
+
+        uint256 sqrtK = HomoraMath.sqrt(r0.mul(r1)).fdiv(totalSupply);
+        (uint256 px0, ) = _oracleValueOf(token0, 1e18);
+        (uint256 px1, ) = _oracleValueOf(token1, 1e18);
+        uint256 fairPriceInBNB = sqrtK
+            .mul(2)
+            .mul(HomoraMath.sqrt(px0))
+            .div(2**56)
+            .mul(HomoraMath.sqrt(px1))
+            .div(2**56);
+
+        valueInBNB = fairPriceInBNB.mul(amount).div(1e18);
+        valueInUSD = valueInBNB.mul(priceOfBNB()).div(1e18);
+    }
+
+    function _unsafeValueOfAsset(address asset, uint256 amount)
+        private
+        view
+        returns (uint256 valueInBNB, uint256 valueInUSD)
+    {
         if (asset == address(0) || asset == WBNB) {
             valueInBNB = amount;
             valueInUSD = amount.mul(priceOfBNB()).div(1e18);
@@ -234,49 +224,5 @@ contract PriceCalculatorBSC is IPriceCalculator, OwnableUpgradeable {
             }
             valueInUSD = valueInBNB.mul(priceOfBNB()).div(1e18);
         }
-    }
-
-    /* ========== PRIVATE FUNCTIONS ========== */
-
-    function _getPairPrice(address pair, uint256 amount)
-        private
-        view
-        returns (uint256 valueInBNB, uint256 valueInUSD)
-    {
-        address token0 = IPancakePair(pair).token0();
-        address token1 = IPancakePair(pair).token1();
-        uint256 totalSupply = IPancakePair(pair).totalSupply();
-        (uint256 r0, uint256 r1, ) = IPancakePair(pair).getReserves();
-
-        uint256 sqrtK = HomoraMath.sqrt(r0.mul(r1)).fdiv(totalSupply);
-        (uint256 px0, ) = _oracleValueOf(token0, 1e18);
-        (uint256 px1, ) = _oracleValueOf(token1, 1e18);
-        uint256 fairPriceInBNB = sqrtK
-            .mul(2)
-            .mul(HomoraMath.sqrt(px0))
-            .div(2**56)
-            .mul(HomoraMath.sqrt(px1))
-            .div(2**56);
-
-        valueInBNB = fairPriceInBNB.mul(amount).div(1e18);
-        valueInUSD = valueInBNB.mul(priceOfBNB()).div(1e18);
-    }
-
-    function _oracleValueOf(address asset, uint256 amount)
-        private
-        view
-        returns (uint256 valueInBNB, uint256 valueInUSD)
-    {
-        valueInUSD = 0;
-        if (tokenFeeds[asset] != address(0)) {
-            (, int256 price, , , ) = AggregatorV3Interface(tokenFeeds[asset])
-                .latestRoundData();
-            valueInUSD = uint256(price).mul(1e10).mul(amount).div(1e18);
-        } else if (
-            references[asset].lastUpdated > block.timestamp.sub(1 days)
-        ) {
-            valueInUSD = references[asset].lastData.mul(amount).div(1e18);
-        }
-        valueInBNB = valueInUSD.mul(1e18).div(priceOfBNB());
     }
 }

@@ -38,6 +38,7 @@ describe("OVRLand Renting - TEST", () => {
   let Minter, minter;
   let Cake2cake, cake2cake;
   let Zap, zap;
+  let pairAddr
 
   let Token, token;
   let wbnbAddr = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"
@@ -115,11 +116,7 @@ describe("OVRLand Renting - TEST", () => {
       pricecal = await Pricecal.deploy();
       await pricecal.deployed();
       console.debug(`\t\t\tpricecal Contract Address: ${cyan}`, pricecal.address);
-      await pricecal.initialize(token.address)
-  
-      await  pricecal.setTokenFeed(cakeAddr, "0xB6064eD41d4f67e353768aA239cA86f4F73665a1")
-      await  pricecal.setTokenFeed("0x0000000000000000000000000000000000000000", "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE")
-      await  pricecal.setTokenFeed("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE")
+     
   });
     
     it("deploy safeswapBNB", async () => {
@@ -158,16 +155,7 @@ describe("OVRLand Renting - TEST", () => {
      console.debug(`\t\t\tMinter ${cyan} cake setted on minter`);
       
   });
-
-/*   it("deploy chef", async () => {
-    minter = await Minter.deploy();
-    await minter.deployed();
-    console.debug(`\t\t\tMinter Contract Address: ${cyan}`, minter.address);
-    await token.transferOwnership(minter.address)
-    const tokenOwner = await token.owner();
-    console.debug(`\t\t\tToken Owner Address: ${cyan}`, tokenOwner);
-}); */
-  });
+});
 
   describe("create contract and add liq", () => {
     it("should create ovr and uniswap contract", async () => {
@@ -189,7 +177,7 @@ describe("OVRLand Renting - TEST", () => {
       const tokenAddr =  token.address;
       console.debug(`\t\t\ttokenaddr: ${yellow}`, tokenAddr);
       console.debug(`\t\t\twbnbaddr: ${yellow}`, wbnbAddr);
-     const pairAddr = await factory.getPair(wbnbAddr, tokenAddr)
+      pairAddr = await factory.getPair(wbnbAddr, tokenAddr)
      console.debug(`\t\t\tpair: ${yellow}`, pairAddr);
      const Pair = await hre.ethers.getContractAt("PancakePair1", pairAddr); 
      const balance = await Pair.balanceOf(owner.address);
@@ -197,6 +185,11 @@ describe("OVRLand Renting - TEST", () => {
       const reserve = await Pair.getReserves()
       console.debug(`\t\t\tpair reserves 0: ${yellow}`,reserve[0]);
       console.debug(`\t\t\tpair reserves 1: ${yellow}`,reserve[1]);
+      await pricecal.initialize(token.address, pairAddr)
+  
+      await  pricecal.setTokenFeed(cakeAddr, "0xB6064eD41d4f67e353768aA239cA86f4F73665a1")
+      await  pricecal.setTokenFeed("0x0000000000000000000000000000000000000000", "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE")
+      await  pricecal.setTokenFeed("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE")
 
 
      const price =  await pricecal.priceOfBunny()
