@@ -3,17 +3,23 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -33,28 +39,35 @@ pragma experimental ABIEncoderV2;
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 */
 
-
 interface IVaultVenusBridge {
-
     struct MarketInfo {
         address token;
         address vToken;
-        uint available;
-        uint vTokenAmount;
+        uint256 available;
+        uint256 vTokenAmount;
     }
 
     function infoOf(address vault) external view returns (MarketInfo memory);
-    function availableOf(address vault) external view returns (uint);
+
+    function availableOf(address vault) external view returns (uint256);
 
     function migrateTo(address payable target) external;
-    function deposit(address vault, uint amount) external payable;
-    function withdraw(address account, uint amount) external;
-    function harvest() external;
-    function balanceOfUnderlying(address vault) external returns (uint);
 
-    function mint(uint amount) external;
-    function redeemUnderlying(uint amount) external;
+    function deposit(address vault, uint256 amount) external payable;
+
+    function withdraw(address account, uint256 amount) external;
+
+    function harvest() external;
+
+    function balanceOfUnderlying(address vault) external returns (uint256);
+
+    function mint(uint256 amount) external;
+
+    function redeemUnderlying(uint256 amount) external;
+
     function redeemAll() external;
-    function borrow(uint amount) external;
-    function repayBorrow(uint amount) external;
+
+    function borrow(uint256 amount) external;
+
+    function repayBorrow(uint256 amount) external;
 }

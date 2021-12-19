@@ -7,9 +7,9 @@
 // Ctrl+f for XXX to see all the modifications.
 
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.6.12;
 
-import "./library/pancakeswap/SafeMath.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
 
 contract Timelock {
     using SafeMath for uint256;

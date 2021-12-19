@@ -2,17 +2,25 @@
 pragma solidity ^0.6.12;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
+
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -34,8 +42,8 @@ pragma solidity ^0.6.12;
 
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/BEP20.sol";
 
-// BunnyToken with Governance.
-contract BunnyToken is BEP20("Bunny Token", "BUNNY") {
+// NoavaToken with Governance.
+contract NoavaToken is BEP20("Noava Token", "NOAVA") {
     // Copied and modified from YAM code:
     // https://github.com/yam-finance/yam-protocol/blob/master/contracts/token/YAMGovernanceStorage.sol
     // https://github.com/yam-finance/yam-protocol/blob/master/contracts/token/YAMGovernance.sol
@@ -137,13 +145,13 @@ contract BunnyToken is BEP20("Bunny Token", "BUNNY") {
         address signatory = ecrecover(digest, v, r, s);
         require(
             signatory != address(0),
-            "BUNNY::delegateBySig: invalid signature"
+            "NOAVA::delegateBySig: invalid signature"
         );
         require(
             nonce == nonces[signatory]++,
-            "BUNNY::delegateBySig: invalid nonce"
+            "NOAVA::delegateBySig: invalid nonce"
         );
-        require(now <= expiry, "BUNNY::delegateBySig: signature expired");
+        require(now <= expiry, "NOAVA::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -184,7 +192,7 @@ contract BunnyToken is BEP20("Bunny Token", "BUNNY") {
     {
         require(
             blockNumber < block.number,
-            "BUNNY::getPriorVotes: not yet determined"
+            "NOAVA::getPriorVotes: not yet determined"
         );
 
         uint32 nCheckpoints = numCheckpoints[account];
@@ -220,7 +228,7 @@ contract BunnyToken is BEP20("Bunny Token", "BUNNY") {
 
     function _delegate(address delegator, address delegatee) internal {
         address currentDelegate = _delegates[delegator];
-        uint256 delegatorBalance = balanceOf(delegator); // balance of underlying BUNNYs (not scaled);
+        uint256 delegatorBalance = balanceOf(delegator); // balance of underlying NOAVAs (not scaled);
         _delegates[delegator] = delegatee;
 
         emit DelegateChanged(delegator, currentDelegate, delegatee);
@@ -264,7 +272,7 @@ contract BunnyToken is BEP20("Bunny Token", "BUNNY") {
     ) internal {
         uint32 blockNumber = safe32(
             block.number,
-            "BUNNY::_writeCheckpoint: block number exceeds 32 bits"
+            "NOAVA::_writeCheckpoint: block number exceeds 32 bits"
         );
 
         if (

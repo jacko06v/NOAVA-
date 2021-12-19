@@ -2,17 +2,12 @@
 pragma solidity ^0.6.12;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -32,20 +27,46 @@ pragma solidity ^0.6.12;
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 */
 
-import "../IBunnyMinter.sol";
+import "../INoavaMinterV2.sol";
 
 interface IStrategyHelper {
-    function tokenPriceInBNB(address _token) view external returns(uint);
-    function cakePriceInBNB() view external returns(uint);
-    function bnbPriceInUSD() view external returns(uint);
+    function tokenPriceInBNB(address _token) external view returns (uint256);
 
-    function flipPriceInBNB(address _flip) view external returns(uint);
-    function flipPriceInUSD(address _flip) view external returns(uint);
+    function cakePriceInBNB() external view returns (uint256);
 
-    function profitOf(IBunnyMinter minter, address _flip, uint amount) external view returns (uint _usd, uint _bunny, uint _bnb);
+    function bnbPriceInUSD() external view returns (uint256);
 
-    function tvl(address _flip, uint amount) external view returns (uint);    // in USD
-    function tvlInBNB(address _flip, uint amount) external view returns (uint);    // in BNB
-    function apy(IBunnyMinter minter, uint pid) external view returns(uint _usd, uint _bunny, uint _bnb);
-    function compoundingAPY(uint pid, uint compoundUnit) view external returns(uint);
+    function profitOf(
+        INoavaMinterV2 minter,
+        address _flip,
+        uint256 amount
+    )
+        external
+        view
+        returns (
+            uint256 _usd,
+            uint256 _noava,
+            uint256 _bnb
+        );
+
+    function tvl(address _flip, uint256 amount) external view returns (uint256); // in USD
+
+    function tvlInBNB(address _flip, uint256 amount)
+        external
+        view
+        returns (uint256); // in BNB
+
+    function apy(INoavaMinterV2 minter, uint256 pid)
+        external
+        view
+        returns (
+            uint256 _usd,
+            uint256 _noava,
+            uint256 _bnb
+        );
+
+    function compoundingAPY(uint256 pid, uint256 compoundUnit)
+        external
+        view
+        returns (uint256);
 }

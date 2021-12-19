@@ -3,17 +3,23 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +47,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {PotConstant} from "../library/PotConstant.sol";
 
-import "../interfaces/IBunnyPool.sol";
+import "../interfaces/INoavaPool.sol";
 import "../interfaces/IMasterChef.sol";
 import "../interfaces/IZap.sol";
 import "../interfaces/IPriceCalculator.sol";
@@ -51,65 +57,82 @@ import "../vaults/VaultController.sol";
 
 import "./PotController.sol";
 
-contract PotBunnyLover is VaultController, PotController {
-    using SafeMath for uint;
+contract PotNoavaLover is VaultController, PotController {
+    using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 
     /* ========== CONSTANT ========== */
 
-    address public constant TIMELOCK_ADDRESS = 0x85c9162A51E03078bdCd08D4232Bab13ed414cC3;
+    address public constant TIMELOCK_ADDRESS =
+        0x85c9162A51E03078bdCd08D4232Bab13ed414cC3;
 
-    IBEP20 private constant BUNNY = IBEP20(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51);
-    IBEP20 private constant WBNB = IBEP20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
-    IBEP20 private constant CAKE = IBEP20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
-    IPriceCalculator private constant priceCalculator = IPriceCalculator(0xF5BF8A9249e3cc4cB684E3f23db9669323d4FB7d);
-    IZap private constant ZapBSC = IZap(0xdC2bBB0D33E0e7Dea9F5b98F46EDBaC823586a0C);
-    IStrategyLegacy private constant BUNNYPool = IStrategyLegacy(0xCADc8CB26c8C7cB46500E61171b5F27e9bd7889D);
+    IBEP20 private constant NOAVA =
+        IBEP20(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51);
+    IBEP20 private constant WBNB =
+        IBEP20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
+    IBEP20 private constant CAKE =
+        IBEP20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
+    IPriceCalculator private constant priceCalculator =
+        IPriceCalculator(0xF5BF8A9249e3cc4cB684E3f23db9669323d4FB7d);
+    IZap private constant ZapBSC =
+        IZap(0xdC2bBB0D33E0e7Dea9F5b98F46EDBaC823586a0C);
+    IStrategyLegacy private constant NOAVAPool =
+        IStrategyLegacy(0xCADc8CB26c8C7cB46500E61171b5F27e9bd7889D);
 
-    uint private constant WEIGHT_BASE = 1000;
+    uint256 private constant WEIGHT_BASE = 1000;
 
     /* ========== STATE VARIABLES ========== */
 
     PotConstant.PotState public state;
 
-    uint public pid;
-    uint public minAmount;
-    uint public maxAmount;
-    uint public burnRatio;
+    uint256 public pid;
+    uint256 public minAmount;
+    uint256 public maxAmount;
+    uint256 public burnRatio;
 
-    uint private _totalSupply;  // total principal
-    uint private _currentSupply;
-    uint private _donateSupply;
-    uint private _totalHarvested;
+    uint256 private _totalSupply; // total principal
+    uint256 private _currentSupply;
+    uint256 private _donateSupply;
+    uint256 private _totalHarvested;
 
-    uint private _totalWeight;  // for select winner
-    uint private _currentUsers;
+    uint256 private _totalWeight; // for select winner
+    uint256 private _currentUsers;
 
-    mapping(address => uint) private _available;
-    mapping(address => uint) private _donation;
+    mapping(address => uint256) private _available;
+    mapping(address => uint256) private _donation;
 
-    mapping(address => uint) private _depositedAt;
-    mapping(address => uint) private _participateCount;
-    mapping(address => uint) private _lastParticipatedPot;
+    mapping(address => uint256) private _depositedAt;
+    mapping(address => uint256) private _participateCount;
+    mapping(address => uint256) private _lastParticipatedPot;
 
-    mapping(uint => PotConstant.PotHistory) private _histories;
+    mapping(uint256 => PotConstant.PotHistory) private _histories;
 
     bytes32 private _treeKey;
-    uint private _boostDuration;
-    address private _bunnyPool;
+    uint256 private _boostDuration;
+    address private _noavaPool;
 
     /* ========== MODIFIERS ========== */
 
     modifier onlyValidState(PotConstant.PotState _state) {
-        require(state == _state, "BunnyPot: invalid pot state");
+        require(state == _state, "NoavaPot: invalid pot state");
         _;
     }
 
-    modifier onlyValidDeposit(uint amount) {
-        require(_available[msg.sender] == 0 || _depositedAt[msg.sender] >= startedAt, "BunnyPot: cannot deposit before claim");
-        require(amount >= minAmount && amount.add(_available[msg.sender]) <= maxAmount, "BunnyPot: invalid input amount");
+    modifier onlyValidDeposit(uint256 amount) {
+        require(
+            _available[msg.sender] == 0 ||
+                _depositedAt[msg.sender] >= startedAt,
+            "NoavaPot: cannot deposit before claim"
+        );
+        require(
+            amount >= minAmount &&
+                amount.add(_available[msg.sender]) <= maxAmount,
+            "NoavaPot: invalid input amount"
+        );
         if (_available[msg.sender] == 0) {
-            _participateCount[msg.sender] = _participateCount[msg.sender].add(1);
+            _participateCount[msg.sender] = _participateCount[msg.sender].add(
+                1
+            );
             _currentUsers = _currentUsers.add(1);
         }
         _;
@@ -117,17 +140,17 @@ contract PotBunnyLover is VaultController, PotController {
 
     /* ========== EVENTS ========== */
 
-    event Deposited(address indexed user, uint amount);
-    event Claimed(address indexed user, uint amount);
+    event Deposited(address indexed user, uint256 amount);
+    event Claimed(address indexed user, uint256 amount);
 
     /* ========== INITIALIZER ========== */
 
     receive() external payable {}
 
     function initialize() external initializer {
-        __VaultController_init(BUNNY);
+        __VaultController_init(NOAVA);
 
-        _stakingToken.safeApprove(address(ZapBSC), uint(-1));
+        _stakingToken.safeApprove(address(ZapBSC), uint256(-1));
 
         burnRatio = 10;
         state = PotConstant.PotState.Cooked;
@@ -136,65 +159,106 @@ contract PotBunnyLover is VaultController, PotController {
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    function totalValueInUSD() public view returns (uint valueInUSD) {
-        (, valueInUSD) = priceCalculator.valueOfAsset(address(_stakingToken), _totalSupply);
+    function totalValueInUSD() public view returns (uint256 valueInUSD) {
+        (, valueInUSD) = priceCalculator.valueOfAsset(
+            address(_stakingToken),
+            _totalSupply
+        );
     }
 
-    function availableOf(address account) public view returns (uint) {
+    function availableOf(address account) public view returns (uint256) {
         return _available[account];
     }
 
-    function weightOf(address _account) public view returns (uint, uint, uint) {
-        return (_timeWeight(_account), _countWeight(_account), _valueWeight(_account));
+    function weightOf(address _account)
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (
+            _timeWeight(_account),
+            _countWeight(_account),
+            _valueWeight(_account)
+        );
     }
 
-    function depositedAt(address account) public view returns (uint) {
+    function depositedAt(address account) public view returns (uint256) {
         return _depositedAt[account];
     }
 
-    function winnersOf(uint _potId) public view returns (address[] memory) {
+    function winnersOf(uint256 _potId) public view returns (address[] memory) {
         return _histories[_potId].winners;
     }
 
-    function potInfoOf(address _account) public view returns (PotConstant.PotInfo memory, PotConstant.PotInfoMe memory) {
-        (, uint valueInUSD) = priceCalculator.valueOfAsset(address(_stakingToken), 1e18);
+    function potInfoOf(address _account)
+        public
+        view
+        returns (PotConstant.PotInfo memory, PotConstant.PotInfoMe memory)
+    {
+        (, uint256 valueInUSD) = priceCalculator.valueOfAsset(
+            address(_stakingToken),
+            1e18
+        );
 
         PotConstant.PotInfo memory info;
         info.potId = potId;
         info.state = state;
         info.supplyCurrent = _currentSupply;
         info.supplyDonation = _donateSupply;
-        info.supplyInUSD = _currentSupply.add(_donateSupply).mul(valueInUSD).div(1e18);
+        info.supplyInUSD = _currentSupply
+            .add(_donateSupply)
+            .mul(valueInUSD)
+            .div(1e18);
         info.rewards = _totalHarvested.mul(100 - burnRatio).div(100);
-        info.rewardsInUSD = _totalHarvested.mul(100 - burnRatio).div(100).mul(valueInUSD).div(1e18);
+        info.rewardsInUSD = _totalHarvested
+            .mul(100 - burnRatio)
+            .div(100)
+            .mul(valueInUSD)
+            .div(1e18);
         info.minAmount = minAmount;
         info.maxAmount = maxAmount;
-        info.avgOdds = _totalWeight > 0 && _currentUsers > 0 ? _totalWeight.div(_currentUsers).mul(100e18).div(_totalWeight) : 0;
+        info.avgOdds = _totalWeight > 0 && _currentUsers > 0
+            ? _totalWeight.div(_currentUsers).mul(100e18).div(_totalWeight)
+            : 0;
         info.startedAt = startedAt;
 
         PotConstant.PotInfoMe memory infoMe;
         infoMe.wTime = _timeWeight(_account);
         infoMe.wCount = _countWeight(_account);
         infoMe.wValue = _valueWeight(_account);
-        infoMe.odds = _totalWeight > 0 ? _calculateWeight(_account).mul(100e18).div(_totalWeight) : 0;
+        infoMe.odds = _totalWeight > 0
+            ? _calculateWeight(_account).mul(100e18).div(_totalWeight)
+            : 0;
         infoMe.available = availableOf(_account);
         infoMe.lastParticipatedPot = _lastParticipatedPot[_account];
         infoMe.depositedAt = depositedAt(_account);
         return (info, infoMe);
     }
 
-    function potHistoryOf(uint _potId) public view returns (PotConstant.PotHistory memory) {
+    function potHistoryOf(uint256 _potId)
+        public
+        view
+        returns (PotConstant.PotHistory memory)
+    {
         return _histories[_potId];
     }
 
-    function boostDuration() external view returns (uint) {
+    function boostDuration() external view returns (uint256) {
         return _boostDuration;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function deposit(uint amount) public onlyValidState(PotConstant.PotState.Opened) onlyValidDeposit(amount) {
-        require(_bunnyPool != address(0), "PotBunnyLover: BunnyPool must set");
+    function deposit(uint256 amount)
+        public
+        onlyValidState(PotConstant.PotState.Opened)
+        onlyValidDeposit(amount)
+    {
+        require(_noavaPool != address(0), "PotNoavaLover: NoavaPool must set");
         address account = msg.sender;
         _stakingToken.safeTransferFrom(account, address(this), amount);
 
@@ -206,25 +270,29 @@ contract PotBunnyLover is VaultController, PotController {
         _totalSupply = _totalSupply.add(amount);
 
         bytes32 accountID = bytes32(uint256(account));
-        uint weightBefore = getWeight(_getTreeKey(), accountID);
-        uint weightCurrent = _calculateWeight(account);
+        uint256 weightBefore = getWeight(_getTreeKey(), accountID);
+        uint256 weightCurrent = _calculateWeight(account);
         _totalWeight = _totalWeight.sub(weightBefore).add(weightCurrent);
         setWeight(_getTreeKey(), weightCurrent, accountID);
 
-        IBunnyPool(_bunnyPool).deposit(amount);
+        INoavaPool(_noavaPool).deposit(amount);
         emit Deposited(account, amount);
     }
 
     function stepToNext() public onlyValidState(PotConstant.PotState.Opened) {
         address account = msg.sender;
-        uint amount = _available[account];
-        require(amount > 0 && _lastParticipatedPot[account] < potId, "BunnyPot: is not participant");
-        uint available = Math.min(maxAmount, amount);
+        uint256 amount = _available[account];
+        require(
+            amount > 0 && _lastParticipatedPot[account] < potId,
+            "NoavaPot: is not participant"
+        );
+        uint256 available = Math.min(maxAmount, amount);
 
-        address[] memory winners = potHistoryOf(_lastParticipatedPot[account]).winners;
-        for (uint i = 0; i < winners.length; i++) {
+        address[] memory winners = potHistoryOf(_lastParticipatedPot[account])
+            .winners;
+        for (uint256 i = 0; i < winners.length; i++) {
             if (winners[i] == account) {
-                revert("BunnyPot: winner can't step to next");
+                revert("NoavaPot: winner can't step to next");
             }
         }
 
@@ -236,67 +304,78 @@ contract PotBunnyLover is VaultController, PotController {
 
         bytes32 accountID = bytes32(uint256(account));
 
-        uint weightCurrent = _calculateWeight(account);
+        uint256 weightCurrent = _calculateWeight(account);
         _totalWeight = _totalWeight.add(weightCurrent);
         setWeight(_getTreeKey(), weightCurrent, accountID);
 
         if (amount > available) {
-            uint diff = amount.sub(available);
+            uint256 diff = amount.sub(available);
             _available[account] = available;
             _totalSupply = _totalSupply.sub(diff);
-            IBunnyPool(_bunnyPool).withdraw(diff);
+            INoavaPool(_noavaPool).withdraw(diff);
             _stakingToken.safeTransfer(account, diff);
         }
     }
 
     function withdrawAll() public {
-        require(_bunnyPool != address(0), "PotBunnyLover: BunnyPool must set");
+        require(_noavaPool != address(0), "PotNoavaLover: NoavaPool must set");
         address account = msg.sender;
-        uint amount = _available[account];
-        require(amount > 0 && _lastParticipatedPot[account] < potId, "BunnyPot: is not participant");
+        uint256 amount = _available[account];
+        require(
+            amount > 0 && _lastParticipatedPot[account] < potId,
+            "NoavaPot: is not participant"
+        );
 
         _totalSupply = _totalSupply.sub(amount);
         delete _available[account];
 
-        IBunnyPool(_bunnyPool).withdraw(amount);
+        INoavaPool(_noavaPool).withdraw(amount);
 
         _stakingToken.safeTransfer(account, amount);
 
         emit Claimed(account, amount);
     }
 
-    function depositDonation(uint amount) public onlyWhitelisted {
-        require(_bunnyPool != address(0), "PotBunnyLover: BunnyPool must set");
+    function depositDonation(uint256 amount) public onlyWhitelisted {
+        require(_noavaPool != address(0), "PotNoavaLover: NoavaPool must set");
         _stakingToken.safeTransferFrom(msg.sender, address(this), amount);
         _totalSupply = _totalSupply.add(amount);
         _donateSupply = _donateSupply.add(amount);
         _donation[msg.sender] = _donation[msg.sender].add(amount);
 
-        IBunnyPool(_bunnyPool).deposit(amount);
+        INoavaPool(_noavaPool).deposit(amount);
 
         _harvest();
     }
 
     function withdrawDonation() public onlyWhitelisted {
-        require(_bunnyPool != address(0), "PotBunnyLover: BunnyPool must set");
-        uint amount = _donation[msg.sender];
+        require(_noavaPool != address(0), "PotNoavaLover: NoavaPool must set");
+        uint256 amount = _donation[msg.sender];
         _totalSupply = _totalSupply.sub(amount);
         _donateSupply = _donateSupply.sub(amount);
         delete _donation[msg.sender];
 
-        IBunnyPool(_bunnyPool).withdraw(amount);
+        INoavaPool(_noavaPool).withdraw(amount);
         _stakingToken.safeTransfer(msg.sender, amount);
         _harvest();
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function setAmountMinMax(uint _min, uint _max) external onlyKeeper onlyValidState(PotConstant.PotState.Cooked) {
+    function setAmountMinMax(uint256 _min, uint256 _max)
+        external
+        onlyKeeper
+        onlyValidState(PotConstant.PotState.Cooked)
+    {
         minAmount = _min;
         maxAmount = _max;
     }
 
-    function openPot() external onlyKeeper onlyValidState(PotConstant.PotState.Cooked) {
+    function openPot()
+        external
+        onlyKeeper
+        onlyValidState(PotConstant.PotState.Cooked)
+    {
         state = PotConstant.PotState.Opened;
         _overCook();
 
@@ -312,11 +391,19 @@ contract PotBunnyLover is VaultController, PotController {
         createTree(_getTreeKey());
     }
 
-    function closePot() external onlyKeeper onlyValidState(PotConstant.PotState.Opened) {
+    function closePot()
+        external
+        onlyKeeper
+        onlyValidState(PotConstant.PotState.Opened)
+    {
         state = PotConstant.PotState.Closed;
     }
 
-    function overCook() external onlyKeeper onlyValidState(PotConstant.PotState.Closed) {
+    function overCook()
+        external
+        onlyKeeper
+        onlyValidState(PotConstant.PotState.Closed)
+    {
         state = PotConstant.PotState.Cooked;
         getRandomNumber(_totalWeight);
     }
@@ -328,101 +415,111 @@ contract PotBunnyLover is VaultController, PotController {
     }
 
     function sweep() external onlyOwner {
-        uint balance = BUNNY.balanceOf(address(this));
+        uint256 balance = NOAVA.balanceOf(address(this));
         if (balance > _totalSupply) {
-            BUNNY.safeTransfer(owner(), balance.sub(_totalSupply));
+            NOAVA.safeTransfer(owner(), balance.sub(_totalSupply));
         }
 
-        uint balanceWBNB = WBNB.balanceOf(address(this));
+        uint256 balanceWBNB = WBNB.balanceOf(address(this));
         if (balanceWBNB > 0) {
             WBNB.safeTransfer(owner(), balanceWBNB);
         }
     }
 
-    function setBurnRatio(uint _burnRatio) external onlyOwner {
-        require(_burnRatio <= 100, "BunnyPot: invalid range");
+    function setBurnRatio(uint256 _burnRatio) external onlyOwner {
+        require(_burnRatio <= 100, "NoavaPot: invalid range");
         burnRatio = _burnRatio;
     }
 
-    function setBoostDuration(uint duration) external onlyOwner {
+    function setBoostDuration(uint256 duration) external onlyOwner {
         _boostDuration = duration;
     }
 
-    function setBunnyPool(address bunnyPool) external onlyOwner {
-        _stakingToken.approve(address(BUNNYPool), 0);
-        if (_bunnyPool != address(0)) {
-            _stakingToken.approve(address(_bunnyPool), 0);
+    function setNoavaPool(address noavaPool) external onlyOwner {
+        _stakingToken.approve(address(NOAVAPool), 0);
+        if (_noavaPool != address(0)) {
+            _stakingToken.approve(address(_noavaPool), 0);
         }
 
-        _bunnyPool = bunnyPool;
+        _noavaPool = noavaPool;
 
-        _stakingToken.approve(_bunnyPool, uint(-1));
+        _stakingToken.approve(_noavaPool, uint256(-1));
         if (CAKE.allowance(address(this), address(ZapBSC)) == 0) {
-            CAKE.approve(address(ZapBSC), uint(-1));
+            CAKE.approve(address(ZapBSC), uint256(-1));
         }
     }
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
     function _harvest() private {
-        require(_bunnyPool != address(0), "PotBunnyLover: BunnyPool must set");
+        require(_noavaPool != address(0), "PotNoavaLover: NoavaPool must set");
         if (_totalSupply == 0) return;
 
-        uint before = BUNNY.balanceOf(address(this));
-        uint beforeBNB = address(this).balance;
-        uint beforeCAKE = CAKE.balanceOf(address(this));
+        uint256 before = NOAVA.balanceOf(address(this));
+        uint256 beforeBNB = address(this).balance;
+        uint256 beforeCAKE = CAKE.balanceOf(address(this));
 
-        IBunnyPool(_bunnyPool).getReward();
+        INoavaPool(_noavaPool).getReward();
 
-        uint amountIn = 0;
+        uint256 amountIn = 0;
         if (address(this).balance.sub(beforeBNB) > 0) {
-            amountIn = address(this).balance.sub(beforeBNB).mul(
-                _currentSupply.add(_donateSupply).add(_totalHarvested)
-            ).div(_totalSupply);
-            ZapBSC.zapIn{value : amountIn}(address(BUNNY));
+            amountIn = address(this)
+                .balance
+                .sub(beforeBNB)
+                .mul(_currentSupply.add(_donateSupply).add(_totalHarvested))
+                .div(_totalSupply);
+            ZapBSC.zapIn{value: amountIn}(address(NOAVA));
         }
 
         if (CAKE.balanceOf(address(this)).sub(beforeCAKE) > 0) {
-            amountIn = CAKE.balanceOf(address(this)).sub(beforeCAKE).mul(
-                _currentSupply.add(_donateSupply).add(_totalHarvested)
-            ).div(_totalSupply);
-            ZapBSC.zapInToken(address(CAKE), amountIn, address(BUNNY));
+            amountIn = CAKE
+                .balanceOf(address(this))
+                .sub(beforeCAKE)
+                .mul(_currentSupply.add(_donateSupply).add(_totalHarvested))
+                .div(_totalSupply);
+            ZapBSC.zapInToken(address(CAKE), amountIn, address(NOAVA));
         }
 
-        uint harvested = BUNNY.balanceOf(address(this)).sub(before);
+        uint256 harvested = NOAVA.balanceOf(address(this)).sub(before);
         if (harvested == 0) return;
 
         _totalHarvested = _totalHarvested.add(harvested);
         _totalSupply = _totalSupply.add(harvested);
 
-        IBunnyPool(_bunnyPool).deposit(harvested);
+        INoavaPool(_noavaPool).deposit(harvested);
     }
 
     function _overCook() private {
-        require(_bunnyPool != address(0), "PotBunnyLover: BunnyPool must set");
+        require(_noavaPool != address(0), "PotNoavaLover: NoavaPool must set");
         if (_totalWeight == 0) return;
 
-        uint buyback = _totalHarvested.mul(burnRatio).div(100);
+        uint256 buyback = _totalHarvested.mul(burnRatio).div(100);
         _totalHarvested = _totalHarvested.sub(buyback);
-        uint winnerCount = Math.max(1, _totalHarvested.div(1000e18));
+        uint256 winnerCount = Math.max(1, _totalHarvested.div(1000e18));
 
         if (buyback > 0) {
-            IBunnyPool(_bunnyPool).withdraw(buyback);
-            BUNNY.safeTransfer(TIMELOCK_ADDRESS, buyback);
+            INoavaPool(_noavaPool).withdraw(buyback);
+            NOAVA.safeTransfer(TIMELOCK_ADDRESS, buyback);
         }
 
         PotConstant.PotHistory memory history;
         history.potId = potId;
         history.users = _currentUsers;
-        history.rewardPerWinner = winnerCount > 0 ? _totalHarvested.div(winnerCount) : 0;
+        history.rewardPerWinner = winnerCount > 0
+            ? _totalHarvested.div(winnerCount)
+            : 0;
         history.date = block.timestamp;
         history.winners = new address[](winnerCount);
 
-        for (uint i = 0; i < winnerCount; i++) {
-            uint rn = uint256(keccak256(abi.encode(_randomness, i))).mod(_totalWeight);
+        for (uint256 i = 0; i < winnerCount; i++) {
+            uint256 rn = uint256(keccak256(abi.encode(_randomness, i))).mod(
+                _totalWeight
+            );
             address selected = draw(_getTreeKey(), rn);
 
-            _available[selected] = _available[selected].add(_totalHarvested.div(winnerCount));
+            _available[selected] = _available[selected].add(
+                _totalHarvested.div(winnerCount)
+            );
             history.winners[i] = selected;
             delete _participateCount[selected];
         }
@@ -430,19 +527,19 @@ contract PotBunnyLover is VaultController, PotController {
         _histories[potId] = history;
     }
 
-    function _calculateWeight(address account) private view returns (uint) {
+    function _calculateWeight(address account) private view returns (uint256) {
         if (_depositedAt[account] < startedAt) return 0;
 
-        uint wTime = _timeWeight(account);
-        uint wCount = _countWeight(account);
-        uint wValue = _valueWeight(account);
+        uint256 wTime = _timeWeight(account);
+        uint256 wCount = _countWeight(account);
+        uint256 wValue = _valueWeight(account);
         return wTime.mul(wCount).mul(wValue).div(100);
     }
 
-    function _timeWeight(address account) private view returns (uint) {
+    function _timeWeight(address account) private view returns (uint256) {
         if (_depositedAt[account] < startedAt) return 0;
 
-        uint timestamp = _depositedAt[account].sub(startedAt);
+        uint256 timestamp = _depositedAt[account].sub(startedAt);
         if (timestamp < _boostDuration) {
             return 28;
         } else if (timestamp < _boostDuration.mul(2)) {
@@ -458,8 +555,8 @@ contract PotBunnyLover is VaultController, PotController {
         }
     }
 
-    function _countWeight(address account) private view returns (uint) {
-        uint count = _participateCount[account];
+    function _countWeight(address account) private view returns (uint256) {
+        uint256 count = _participateCount[account];
         if (count >= 13) {
             return 40;
         } else if (count >= 9) {
@@ -471,29 +568,37 @@ contract PotBunnyLover is VaultController, PotController {
         }
     }
 
-    function _valueWeight(address account) private view returns (uint) {
-        uint amount = _available[account];
-        uint denom = Math.max(minAmount, 1);
-        return Math.min(amount.mul(10).div(denom), maxAmount.mul(10).div(denom));
+    function _valueWeight(address account) private view returns (uint256) {
+        uint256 amount = _available[account];
+        uint256 denom = Math.max(minAmount, 1);
+        return
+            Math.min(amount.mul(10).div(denom), maxAmount.mul(10).div(denom));
     }
 
     function _getTreeKey() private view returns (bytes32) {
-        return _treeKey == bytes32(0) ? keccak256("Bunny/MultipleWinnerPot") : _treeKey;
+        return
+            _treeKey == bytes32(0)
+                ? keccak256("Noava/MultipleWinnerPot")
+                : _treeKey;
     }
 
     /* ========== MIGRATION ========== */
 
     function migrate() external onlyOwner {
-        require(_bunnyPool != address(0), "PotBunnyLover: must set BunnyPool");
-        uint before = BUNNY.balanceOf(address(this));
-        uint beforeWBNB = IBEP20(WBNB).balanceOf(address(this));
+        require(_noavaPool != address(0), "PotNoavaLover: must set NoavaPool");
+        uint256 before = NOAVA.balanceOf(address(this));
+        uint256 beforeWBNB = IBEP20(WBNB).balanceOf(address(this));
 
-        BUNNYPool.withdrawAll();
+        NOAVAPool.withdrawAll();
 
-        uint harvested = WBNB.balanceOf(address(this)).sub(beforeWBNB);
-        harvested = harvested.mul(_currentSupply.add(_donateSupply).add(_totalHarvested)).div(_totalSupply);
+        uint256 harvested = WBNB.balanceOf(address(this)).sub(beforeWBNB);
+        harvested = harvested
+            .mul(_currentSupply.add(_donateSupply).add(_totalHarvested))
+            .div(_totalSupply);
 
-        ZapBSC.zapInToken(address(WBNB), harvested, address(BUNNY));
-        IBunnyPool(_bunnyPool).deposit(BUNNY.balanceOf(address(this)).sub(before));
+        ZapBSC.zapInToken(address(WBNB), harvested, address(NOAVA));
+        INoavaPool(_noavaPool).deposit(
+            NOAVA.balanceOf(address(this)).sub(before)
+        );
     }
 }

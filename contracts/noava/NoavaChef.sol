@@ -3,17 +3,25 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
+
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -38,19 +46,18 @@ import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "../interfaces/IBunnyMinterV2.sol";
-import "../interfaces/IBunnyChef.sol";
+import "../interfaces/INoavaMinterV2.sol";
+import "../interfaces/INoavaChef.sol";
 import "../interfaces/IStrategy.sol";
-import "./BunnyToken.sol";
+import "./NoavaToken.sol";
 
-contract BunnyChef is IBunnyChef, OwnableUpgradeable {
+contract NoavaChef is INoavaChef, OwnableUpgradeable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 
     /* ========== CONSTANTS ============= */
 
-    BunnyToken public constant BUNNY =
-        BunnyToken(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51);
+    NoavaToken public NOAVA;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -58,10 +65,10 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
     mapping(address => VaultInfo) vaults;
     mapping(address => mapping(address => UserInfo)) vaultUsers;
 
-    IBunnyMinterV2 public minter;
+    INoavaMinterV2 public minter;
 
     uint256 public startBlock;
-    uint256 public override bunnyPerBlock;
+    uint256 public override noavaPerBlock;
     uint256 public override totalAllocPoint;
 
     /* ========== MODIFIERS ========== */
@@ -69,7 +76,7 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
     modifier onlyVaults() {
         require(
             vaults[msg.sender].token != address(0),
-            "BunnyChef: caller is not on the vault"
+            "NoavaChef: caller is not on the vault"
         );
         _;
     }
@@ -84,10 +91,10 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
                     block.number
                 );
                 uint256 rewards = multiplier
-                    .mul(bunnyPerBlock)
+                    .mul(noavaPerBlock)
                     .mul(vaultInfo.allocPoint)
                     .div(totalAllocPoint);
-                vaultInfo.accBunnyPerShare = vaultInfo.accBunnyPerShare.add(
+                vaultInfo.accNoavaPerShare = vaultInfo.accNoavaPerShare.add(
                     rewards.mul(1e12).div(tokenSupply)
                 );
             }
@@ -108,7 +115,7 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
         address indexed vault,
         uint256 amount
     );
-    event BunnyRewardPaid(
+    event NoavaRewardPaid(
         address indexed user,
         address indexed vault,
         uint256 amount
@@ -116,14 +123,15 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
 
     /* ========== INITIALIZER ========== */
 
-    function initialize(uint256 _startBlock, uint256 _bunnyPerBlock)
-        external
-        initializer
-    {
+    function initialize(
+        uint256 _startBlock,
+        uint256 _noavaPerBlock,
+        NoavaToken _token
+    ) external initializer {
         __Ownable_init();
-
+        NOAVA = _token;
         startBlock = _startBlock;
-        bunnyPerBlock = _bunnyPerBlock;
+        noavaPerBlock = _noavaPerBlock;
     }
 
     /* ========== VIEWS ========== */
@@ -158,7 +166,7 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
         return vaultUsers[vault][user];
     }
 
-    function pendingBunny(address vault, address user)
+    function pendingNoava(address vault, address user)
         public
         view
         override
@@ -167,24 +175,24 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
         UserInfo storage userInfo = vaultUsers[vault][user];
         VaultInfo storage vaultInfo = vaults[vault];
 
-        uint256 accBunnyPerShare = vaultInfo.accBunnyPerShare;
+        uint256 accNoavaPerShare = vaultInfo.accNoavaPerShare;
         uint256 tokenSupply = tokenSupplyOf(vault);
         if (block.number > vaultInfo.lastRewardBlock && tokenSupply > 0) {
             uint256 multiplier = timeMultiplier(
                 vaultInfo.lastRewardBlock,
                 block.number
             );
-            uint256 bunnyRewards = multiplier
-                .mul(bunnyPerBlock)
+            uint256 noavaRewards = multiplier
+                .mul(noavaPerBlock)
                 .mul(vaultInfo.allocPoint)
                 .div(totalAllocPoint);
-            accBunnyPerShare = accBunnyPerShare.add(
-                bunnyRewards.mul(1e12).div(tokenSupply)
+            accNoavaPerShare = accNoavaPerShare.add(
+                noavaRewards.mul(1e12).div(tokenSupply)
             );
         }
         return
             userInfo.pending.add(
-                userInfo.balance.mul(accBunnyPerShare).div(1e12).sub(
+                userInfo.balance.mul(accNoavaPerShare).div(1e12).sub(
                     userInfo.rewardPaid
                 )
             );
@@ -199,7 +207,7 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
     ) public onlyOwner {
         require(
             vaults[vault].token == address(0),
-            "BunnyChef: vault is already set"
+            "NoavaChef: vault is already set"
         );
         bulkUpdateRewards();
 
@@ -214,7 +222,7 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
     function updateVault(address vault, uint256 allocPoint) public onlyOwner {
         require(
             vaults[vault].token != address(0),
-            "BunnyChef: vault must be set"
+            "NoavaChef: vault must be set"
         );
         bulkUpdateRewards();
 
@@ -230,14 +238,14 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
     function setMinter(address _minter) external onlyOwner {
         require(
             address(minter) == address(0),
-            "BunnyChef: setMinter only once"
+            "NoavaChef: setMinter only once"
         );
-        minter = IBunnyMinterV2(_minter);
+        minter = INoavaMinterV2(_minter);
     }
 
-    function setBunnyPerBlock(uint256 _bunnyPerBlock) external onlyOwner {
+    function setNoavaPerBlock(uint256 _noavaPerBlock) external onlyOwner {
         bulkUpdateRewards();
-        bunnyPerBlock = _bunnyPerBlock;
+        noavaPerBlock = _noavaPerBlock;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -253,14 +261,14 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
 
         uint256 pending = userInfo
             .balance
-            .mul(vaultInfo.accBunnyPerShare)
+            .mul(vaultInfo.accNoavaPerShare)
             .div(1e12)
             .sub(userInfo.rewardPaid);
         userInfo.pending = userInfo.pending.add(pending);
         userInfo.balance = userInfo.balance.add(amount);
         userInfo.rewardPaid = userInfo
             .balance
-            .mul(vaultInfo.accBunnyPerShare)
+            .mul(vaultInfo.accNoavaPerShare)
             .div(1e12);
         emit NotifyDeposited(user, msg.sender, amount);
     }
@@ -276,19 +284,19 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
 
         uint256 pending = userInfo
             .balance
-            .mul(vaultInfo.accBunnyPerShare)
+            .mul(vaultInfo.accNoavaPerShare)
             .div(1e12)
             .sub(userInfo.rewardPaid);
         userInfo.pending = userInfo.pending.add(pending);
         userInfo.balance = userInfo.balance.sub(amount);
         userInfo.rewardPaid = userInfo
             .balance
-            .mul(vaultInfo.accBunnyPerShare)
+            .mul(vaultInfo.accNoavaPerShare)
             .div(1e12);
         emit NotifyWithdrawn(user, msg.sender, amount);
     }
 
-    function safeBunnyTransfer(address user)
+    function safeNoavaTransfer(address user)
         external
         override
         onlyVaults
@@ -300,19 +308,19 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
 
         uint256 pending = userInfo
             .balance
-            .mul(vaultInfo.accBunnyPerShare)
+            .mul(vaultInfo.accNoavaPerShare)
             .div(1e12)
             .sub(userInfo.rewardPaid);
         uint256 amount = userInfo.pending.add(pending);
         userInfo.pending = 0;
         userInfo.rewardPaid = userInfo
             .balance
-            .mul(vaultInfo.accBunnyPerShare)
+            .mul(vaultInfo.accNoavaPerShare)
             .div(1e12);
 
         minter.mint(amount);
-        minter.safeBunnyTransfer(user, amount);
-        emit BunnyRewardPaid(user, msg.sender, amount);
+        minter.safeNoavaTransfer(user, amount);
+        emit NoavaRewardPaid(user, msg.sender, amount);
         return amount;
     }
 
@@ -341,8 +349,8 @@ contract BunnyChef is IBunnyChef, OwnableUpgradeable {
         onlyOwner
     {
         require(
-            _token != address(BUNNY),
-            "BunnyChef: cannot recover BUNNY token"
+            _token != address(NOAVA),
+            "NoavaChef: cannot recover NOAVA token"
         );
         IBEP20(_token).safeTransfer(owner(), amount);
     }

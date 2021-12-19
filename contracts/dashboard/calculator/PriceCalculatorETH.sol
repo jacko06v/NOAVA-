@@ -3,17 +3,25 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
+
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -44,16 +52,18 @@ import "../../interfaces/AggregatorV3Interface.sol";
 import "../../interfaces/IPriceCalculator.sol";
 import "../../library/HomoraMath.sol";
 
-
 contract PriceCalculatorETH is IPriceCalculator, OwnableUpgradeable {
-    using SafeMath for uint;
-    using HomoraMath for uint;
+    using SafeMath for uint256;
+    using HomoraMath for uint256;
 
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    IUniswapV2Factory private constant factory = IUniswapV2Factory(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
-    AggregatorV3Interface private constant ethPriceFeed = AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-    AggregatorV3Interface private constant bnbPriceFeed = AggregatorV3Interface(0x14e613AC84a31f709eadbdF89C6CC390fDc9540A);
+    IUniswapV2Factory private constant factory =
+        IUniswapV2Factory(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
+    AggregatorV3Interface private constant ethPriceFeed =
+        AggregatorV3Interface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+    AggregatorV3Interface private constant bnbPriceFeed =
+        AggregatorV3Interface(0x14e613AC84a31f709eadbdF89C6CC390fDc9540A);
 
     /* ========== STATE VARIABLES ========== */
 
@@ -78,63 +88,90 @@ contract PriceCalculatorETH is IPriceCalculator, OwnableUpgradeable {
 
     /* ========== Value Calculation ========== */
 
-    function priceOfETH() view public returns (uint) {
-        (, int price, , ,) = ethPriceFeed.latestRoundData();
-        return uint(price).mul(1e10);
+    function priceOfETH() public view returns (uint256) {
+        (, int256 price, , , ) = ethPriceFeed.latestRoundData();
+        return uint256(price).mul(1e10);
     }
 
-    function priceOfBNB() view public override returns (uint) {
-        (, int price, , ,) = bnbPriceFeed.latestRoundData();
-        return uint(price).mul(1e10);
+    function priceOfBNB() public view override returns (uint256) {
+        (, int256 price, , , ) = bnbPriceFeed.latestRoundData();
+        return uint256(price).mul(1e10);
     }
 
-    function priceOfBunny() view external override returns (uint) {
+    function priceOfNoava() external view override returns (uint256) {
         return 0;
     }
 
-    function pricesInUSD(address[] memory assets) public view override returns (uint[] memory) {
-        uint[] memory prices = new uint[](assets.length);
-        for (uint i = 0; i < assets.length; i++) {
-            (, uint valueInUSD) = valueOfAsset(assets[i], 1e18);
+    function pricesInUSD(address[] memory assets)
+        public
+        view
+        override
+        returns (uint256[] memory)
+    {
+        uint256[] memory prices = new uint256[](assets.length);
+        for (uint256 i = 0; i < assets.length; i++) {
+            (, uint256 valueInUSD) = valueOfAsset(assets[i], 1e18);
             prices[i] = valueInUSD;
         }
         return prices;
     }
 
-    function valueOfAsset(address asset, uint amount) public view override returns (uint valueInETH, uint valueInUSD) {
+    function valueOfAsset(address asset, uint256 amount)
+        public
+        view
+        override
+        returns (uint256 valueInETH, uint256 valueInUSD)
+    {
         if (asset == address(0) || asset == WETH) {
             return _oracleValueOf(WETH, amount);
-        } else if (keccak256(abi.encodePacked(IUniswapV2Pair(asset).symbol())) == keccak256("UNI-V2")) {
+        } else if (
+            keccak256(abi.encodePacked(IUniswapV2Pair(asset).symbol())) ==
+            keccak256("UNI-V2")
+        ) {
             return _getPairPrice(asset, amount);
         } else {
             return _oracleValueOf(asset, amount);
         }
     }
 
-    function _oracleValueOf(address asset, uint amount) private view returns (uint valueInETH, uint valueInUSD) {
-        (, int price, , ,) = AggregatorV3Interface(tokenFeeds[asset]).latestRoundData();
-        valueInUSD = uint(price).mul(1e10).mul(amount).div(1e18);
+    function _oracleValueOf(address asset, uint256 amount)
+        private
+        view
+        returns (uint256 valueInETH, uint256 valueInUSD)
+    {
+        (, int256 price, , , ) = AggregatorV3Interface(tokenFeeds[asset])
+            .latestRoundData();
+        valueInUSD = uint256(price).mul(1e10).mul(amount).div(1e18);
         valueInETH = valueInUSD.mul(1e18).div(priceOfETH());
     }
 
-    function _getPairPrice(address pair, uint amount) private view returns (uint valueInETH, uint valueInUSD) {
+    function _getPairPrice(address pair, uint256 amount)
+        private
+        view
+        returns (uint256 valueInETH, uint256 valueInUSD)
+    {
         address token0 = IUniswapV2Pair(pair).token0();
         address token1 = IUniswapV2Pair(pair).token1();
-        uint totalSupply = IUniswapV2Pair(pair).totalSupply();
-        (uint r0, uint r1, ) = IUniswapV2Pair(pair).getReserves();
+        uint256 totalSupply = IUniswapV2Pair(pair).totalSupply();
+        (uint256 r0, uint256 r1, ) = IUniswapV2Pair(pair).getReserves();
 
         if (ERC20(token0).decimals() < uint8(18)) {
-            r0 = r0.mul(10 ** uint(uint8(18) - ERC20(token0).decimals()));
+            r0 = r0.mul(10**uint256(uint8(18) - ERC20(token0).decimals()));
         }
 
         if (ERC20(token1).decimals() < uint8(18)) {
-            r1 = r1.mul(10 ** uint(uint8(18) - ERC20(token1).decimals()));
+            r1 = r1.mul(10**uint256(uint8(18) - ERC20(token1).decimals()));
         }
 
-        uint sqrtK = HomoraMath.sqrt(r0.mul(r1)).fdiv(totalSupply);
-        (uint px0,) = _oracleValueOf(token0, 1e18);
-        (uint px1,) = _oracleValueOf(token1, 1e18);
-        uint fairPriceInETH = sqrtK.mul(2).mul(HomoraMath.sqrt(px0)).div(2**56).mul(HomoraMath.sqrt(px1)).div(2**56);
+        uint256 sqrtK = HomoraMath.sqrt(r0.mul(r1)).fdiv(totalSupply);
+        (uint256 px0, ) = _oracleValueOf(token0, 1e18);
+        (uint256 px1, ) = _oracleValueOf(token1, 1e18);
+        uint256 fairPriceInETH = sqrtK
+            .mul(2)
+            .mul(HomoraMath.sqrt(px0))
+            .div(2**56)
+            .mul(HomoraMath.sqrt(px1))
+            .div(2**56);
 
         valueInETH = fairPriceInETH.mul(amount).div(1e18);
         valueInUSD = valueInETH.mul(priceOfETH()).div(1e18);

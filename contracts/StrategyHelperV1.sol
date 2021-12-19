@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity ^0.6.12;
 
-import "./library/pancakeswap/IBEP20.sol";
-import "./library/pancakeswap/BEP20.sol";
-import "./library/pancakeswap/SafeMath.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/BEP20.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
 
 import "./interfaces/IPancakeFactory.sol";
 import "./interfaces/IPancakePair.sol";
 import "./interfaces/IMasterChef.sol";
 import "./interfaces/IStrategy.sol";
+import "./interfaces/INoavaMinterV2.sol";
 import "./interfaces/legacy/IStrategyHelper.sol";
 
 // no storage
@@ -73,7 +74,7 @@ contract StrategyHelperV1 is IStrategyHelper {
     }
 
     function profitOf(
-        IPinkMinterV1 minter,
+        INoavaMinterV2 minter,
         address flip,
         uint256 amount
     )
@@ -82,18 +83,18 @@ contract StrategyHelperV1 is IStrategyHelper {
         override
         returns (
             uint256 _usd,
-            uint256 _pink,
+            uint256 _noava,
             uint256 _bnb
         )
     {
         _usd = tvl(flip, amount);
         if (address(minter) == address(0)) {
-            _pink = 0;
+            _noava = 0;
         } else {
             uint256 performanceFee = minter.performanceFee(_usd);
             _usd = _usd.sub(performanceFee);
             uint256 bnbAmount = performanceFee.mul(1e18).div(bnbPriceInUSD());
-            _pink = minter.amountPinkToMint(bnbAmount);
+            _noava = minter.amountNoavaToMint(bnbAmount);
         }
         _bnb = 0;
     }
@@ -107,18 +108,18 @@ contract StrategyHelperV1 is IStrategyHelper {
         return cakePriceInBNB().mul(cakePerYearOfPool(pid)).div(poolSize);
     }
 
-    function apy(IPinkMinterV1, uint256 pid)
+    function apy(INoavaMinterV2, uint256 pid)
         public
         view
         override
         returns (
             uint256 _usd,
-            uint256 _pink,
+            uint256 _noava,
             uint256 _bnb
         )
     {
         _usd = compoundingAPY(pid, 1 days);
-        _pink = 0;
+        _noava = 0;
         _bnb = 0;
     }
 

@@ -2,17 +2,23 @@
 pragma solidity ^0.6.12;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -33,51 +39,52 @@ pragma solidity ^0.6.12;
 * SOFTWARE.
 */
 
-
 library PoolConstant {
-
     enum PoolTypes {
-        BunnyStake_deprecated, // no perf fee
-        BunnyFlip_deprecated, // deprecated
-        CakeStake, FlipToFlip, FlipToCake,
-        Bunny, // no perf fee
-        BunnyBNB,
+        NoavaStake_deprecated, // no perf fee
+        NoavaFlip_deprecated, // deprecated
+        CakeStake,
+        FlipToFlip,
+        FlipToCake,
+        Noava, // no perf fee
+        NoavaBNB,
         Venus,
         Collateral,
-        BunnyToBunny,
+        NoavaToNoava,
         FlipToReward,
-        BunnyV2,
+        NoavaV2,
         Qubit,
-        bQBT, flipToQBT
+        bQBT,
+        flipToQBT
     }
 
     struct PoolInfo {
         address pool;
-        uint balance;
-        uint principal;
-        uint available;
-        uint tvl;
-        uint utilized;
-        uint liquidity;
-        uint pBASE;
-        uint pBUNNY;
-        uint depositedAt;
-        uint feeDuration;
-        uint feePercentage;
-        uint portfolio;
+        uint256 balance;
+        uint256 principal;
+        uint256 available;
+        uint256 tvl;
+        uint256 utilized;
+        uint256 liquidity;
+        uint256 pBASE;
+        uint256 pNOAVA;
+        uint256 depositedAt;
+        uint256 feeDuration;
+        uint256 feePercentage;
+        uint256 portfolio;
     }
 
     struct RelayInfo {
         address pool;
-        uint balanceInUSD;
-        uint debtInUSD;
-        uint earnedInUSD;
+        uint256 balanceInUSD;
+        uint256 debtInUSD;
+        uint256 earnedInUSD;
     }
 
     struct RelayWithdrawn {
         address pool;
         address account;
-        uint profitInETH;
-        uint lossInETH;
+        uint256 profitInETH;
+        uint256 lossInETH;
     }
 }

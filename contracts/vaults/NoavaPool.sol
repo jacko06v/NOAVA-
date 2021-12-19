@@ -19,7 +19,7 @@ interface IPresale {
     function flipToken() external view returns (address);
 }
 
-contract BunnyPool is
+contract NoavaPool is
     IStrategyLegacy,
     RewardsDistributionRecipient,
     ReentrancyGuard,
@@ -30,9 +30,9 @@ contract BunnyPool is
 
     /* ========== STATE VARIABLES ========== */
 
-    IBEP20 public rewardsToken; // bunny/bnb flip
+    IBEP20 public rewardsToken; // noava/bnb flip
     IBEP20 public constant stakingToken =
-        IBEP20(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51); // bunny
+        IBEP20(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51); // noava
     uint256 public periodFinish = 0;
     uint256 public rewardRate = 0;
     uint256 public rewardsDuration = 90 days;
@@ -58,7 +58,7 @@ contract BunnyPool is
     uint256 private constant timestamp90DaysAfterPresaleEnds =
         1605585600 + (90 days);
 
-    /* ========== BUNNY HELPER ========= */
+    /* ========== NOAVA HELPER ========= */
 
     IStrategyHelper public helper =
         IStrategyHelper(0xA84c09C1a2cF4918CaEf625682B429398b97A1a0);
@@ -115,7 +115,7 @@ contract BunnyPool is
         returns (uint256)
     {
         if (block.timestamp > timestamp90DaysAfterPresaleEnds) {
-            // unlock all presale bunny after 90 days of presale
+            // unlock all presale noava after 90 days of presale
             return _balances[account];
         } else if (block.timestamp < timestamp2HoursAfterPresaleEnds) {
             return _balances[account].sub(_presaleBalance[account]);
@@ -124,18 +124,18 @@ contract BunnyPool is
                 .totalBalance()
                 .div(2)
                 .mul(3); // mint 150% of presale for making flip token
-            uint256 bunnySupply = stakingToken.totalSupply().sub(
+            uint256 noavaSupply = stakingToken.totalSupply().sub(
                 stakingToken.balanceOf(deadAddress)
             );
-            if (soldInPresale >= bunnySupply) {
+            if (soldInPresale >= noavaSupply) {
                 return _balances[account].sub(_presaleBalance[account]);
             }
-            uint256 bunnyNewMint = bunnySupply.sub(soldInPresale);
-            if (bunnyNewMint >= soldInPresale) {
+            uint256 noavaNewMint = noavaSupply.sub(soldInPresale);
+            if (noavaNewMint >= soldInPresale) {
                 return _balances[account];
             }
 
-            uint256 lockedRatio = (soldInPresale.sub(bunnyNewMint))
+            uint256 lockedRatio = (soldInPresale.sub(noavaNewMint))
                 .mul(1e18)
                 .div(soldInPresale);
             uint256 lockedBalance = _presaleBalance[account]
@@ -151,12 +151,12 @@ contract BunnyPool is
         override
         returns (
             uint256 _usd,
-            uint256 _bunny,
+            uint256 _noava,
             uint256 _bnb
         )
     {
         _usd = 0;
-        _bunny = 0;
+        _noava = 0;
         _bnb = helper.tvlInBNB(address(rewardsToken), earned(account));
     }
 
@@ -171,7 +171,7 @@ contract BunnyPool is
         override
         returns (
             uint256 _usd,
-            uint256 _bunny,
+            uint256 _noava,
             uint256 _bnb
         )
     {
@@ -184,13 +184,13 @@ contract BunnyPool is
         uint256 rewardPerTokenPerSecond = rewardRate.mul(tokenDecimals).div(
             __totalSupply
         );
-        uint256 bunnyPrice = helper.tokenPriceInBNB(address(stakingToken));
+        uint256 noavaPrice = helper.tokenPriceInBNB(address(stakingToken));
         uint256 flipPrice = helper.tvlInBNB(address(rewardsToken), 1e18);
 
         _usd = 0;
-        _bunny = 0;
+        _noava = 0;
         _bnb = rewardPerTokenPerSecond.mul(365 days).mul(flipPrice).div(
-            bunnyPrice
+            noavaPrice
         );
     }
 
@@ -283,7 +283,7 @@ contract BunnyPool is
 
     function _flipToWBNB(uint256 amount) private returns (uint256 reward) {
         address wbnb = ROUTER_V1_DEPRECATED.WETH();
-        (uint256 rewardBunny, ) = ROUTER_V1_DEPRECATED.removeLiquidity(
+        (uint256 rewardNoava, ) = ROUTER_V1_DEPRECATED.removeLiquidity(
             address(stakingToken),
             wbnb,
             amount,
@@ -296,7 +296,7 @@ contract BunnyPool is
         path[0] = address(stakingToken);
         path[1] = wbnb;
         ROUTER_V1_DEPRECATED.swapExactTokensForTokens(
-            rewardBunny,
+            rewardNoava,
             0,
             path,
             address(this),
@@ -321,18 +321,18 @@ contract BunnyPool is
         userInfo.available = withdrawableBalanceOf(account);
 
         Profit memory profit;
-        (uint256 usd, uint256 bunny, uint256 bnb) = profitOf(account);
+        (uint256 usd, uint256 noava, uint256 bnb) = profitOf(account);
         profit.usd = usd;
-        profit.bunny = bunny;
+        profit.noava = noava;
         profit.bnb = bnb;
         userInfo.profit = profit;
 
         userInfo.poolTVL = tvl();
 
         APY memory poolAPY;
-        (usd, bunny, bnb) = apy();
+        (usd, noava, bnb) = apy();
         poolAPY.usd = usd;
-        poolAPY.bunny = bunny;
+        poolAPY.noava = noava;
         poolAPY.bnb = bnb;
         userInfo.poolAPY = poolAPY;
 

@@ -2,6 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { time } = require("@openzeppelin/test-helpers");
 const { boolean } = require("hardhat/internal/core/params/argumentTypes");
+const { default: BigNumber } = require("bignumber.js");
 
 const cyan = "\x1b[36m%s\x1b[0m";
 const yellow = "\x1b[33m%s\x1b[0m";
@@ -39,6 +40,8 @@ describe("OVRLand Renting - TEST", () => {
   let Cake2cake, cake2cake;
   let Zap, zap;
   let pairAddr
+  let Lock, lock;
+  let Box, box;
 
   let Token, token;
   let wbnbAddr = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"
@@ -59,13 +62,15 @@ describe("OVRLand Renting - TEST", () => {
 
   beforeEach(async () => {
     Cake2cake = await ethers.getContractFactory("VaultCakeToCake");
-    Token = await ethers.getContractFactory("BunnyToken");
+    Token = await ethers.getContractFactory("NoavaToken");
     Pricecal = await ethers.getContractFactory("PriceCalculatorBSC");
-    Chef = await ethers.getContractFactory("BunnyChef");
-    Minter = await ethers.getContractFactory("BunnyMinterV2");
+    Chef = await ethers.getContractFactory("NoavaChef");
+    Minter = await ethers.getContractFactory("NoavaMinterV2");
     Safeswap = await ethers.getContractFactory("safeSwapBNB");
     Zap = await ethers.getContractFactory("ZapBSC");
     pair =  await ethers.getContractFactory("PancakePair1");
+    Lock = await ethers.getContractFactory("Timelock");
+    Box = await ethers.getContractFactory("NoavaFeeBox");
     [
       owner, // 50 ether
       addr1, // 0
@@ -96,6 +101,13 @@ describe("OVRLand Renting - TEST", () => {
   });
 
   describe("Should deploy", () => {
+
+    it("deploy lock", async () => {
+      lock = await Lock.deploy(owner.address, 1123200);
+      await lock.deployed();
+      console.debug(`\t\t\tlock Contract Address: ${cyan}`, lock.address);
+     
+  });
   
     it("Should deploy", async () => {
       token = await Token.deploy();
@@ -118,6 +130,12 @@ describe("OVRLand Renting - TEST", () => {
       console.debug(`\t\t\tpricecal Contract Address: ${cyan}`, pricecal.address);
      
   });
+  it("deploy chef", async () => {
+    chef = await Chef.deploy();
+    await chef.deployed();
+    await chef.initialize(13556793, BigInt(523211567732115677), token.address)
+    console.debug(`\t\t\tchef Contract Address: ${cyan}`, chef.address);
+});
     
     it("deploy safeswapBNB", async () => {
       safeswap = await Safeswap.deploy();
@@ -138,21 +156,21 @@ describe("OVRLand Renting - TEST", () => {
         await token.transferOwnership(minter.address)
         const tokenOwner = await token.owner();
         console.debug(`\t\t\tToken Owner Address: ${cyan}`, tokenOwner);
+        await  chef.setMinter(minter.address)
     });
     it("deploy cake2cake", async () => {
       cake2cake = await Cake2cake.deploy();
       await cake2cake.deployed();
       console.debug(`\t\t\tcake2cake Contract Address: ${cyan}`, cake2cake.address);
-      await minter.initialize(token.address, zap.address, pricecal.address)
-      console.debug(`\t\t\tMinter ${cyan} initialized`);
-      const token1 = await minter.BUNNY();
+      
+      const token1 = await minter.NOAVA();
       console.debug(`\t\t\tMinter ${cyan} initialized`, token1);
       const owner = await minter.owner();
       console.debug(`\t\t\tMinter ${cyan} initialized`, owner);
      await cake2cake.initialize(minter.address, token.address) 
      console.debug(`\t\t\tcakvault ${cyan} initialized`, minter.address);
-     await minter.setMinter(cake2cake.address, true) 
-     console.debug(`\t\t\tMinter ${cyan} cake setted on minter`);
+     
+     await chef.addVault(cake2cake.address, cakeAddr, 100)
       
   });
 });
@@ -163,6 +181,7 @@ describe("OVRLand Renting - TEST", () => {
 
       router = await hre.ethers.getContractAt("PancakeRouter", routerAddr);
     });
+    
     it("should add liq", async () => {
       
       await token.approve(router.address, web3.utils.toWei("10000", 'ether'));
@@ -178,6 +197,7 @@ describe("OVRLand Renting - TEST", () => {
       console.debug(`\t\t\ttokenaddr: ${yellow}`, tokenAddr);
       console.debug(`\t\t\twbnbaddr: ${yellow}`, wbnbAddr);
       pairAddr = await factory.getPair(wbnbAddr, tokenAddr)
+     
      console.debug(`\t\t\tpair: ${yellow}`, pairAddr);
      const Pair = await hre.ethers.getContractAt("PancakePair1", pairAddr); 
      const balance = await Pair.balanceOf(owner.address);
@@ -192,7 +212,7 @@ describe("OVRLand Renting - TEST", () => {
       await  pricecal.setTokenFeed("0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE")
 
 
-     const price =  await pricecal.priceOfBunny()
+     const price =  await pricecal.priceOfNoava()
      console.debug(`\t\t\tPRICE: ${yellow}`, price);
 
      console.log("---------------------------")
@@ -208,13 +228,27 @@ describe("OVRLand Renting - TEST", () => {
       console.debug(`\t\t\tpair reserves 1: ${yellow}`,reserve1[1]);
 
 
-   const price2 =  await pricecal.priceOfBunny()
+   const price2 =  await pricecal.priceOfNoava()
    console.debug(`\t\t\tPRICE: ${yellow}`, price2);
 
       
      
       
     });
+    it("deploy feeBox", async () => {
+      box = await Box.deploy();
+      await box.deployed();
+      box.initialize(safeswap.address, zap.address, token.address, pairAddr)
+      console.debug(`\t\t\tbox Contract Address: ${cyan}`, box.address);
+     
+  });
+  it("init minter", async () => {
+    await minter.initialize(token.address, zap.address, pricecal.address,pairAddr, lock.address, box.address, owner.address)
+      console.debug(`\t\t\tMinter ${cyan} initialized`);
+     await minter.setMinter(cake2cake.address, true) 
+     console.debug(`\t\t\tMinter ${cyan} cake setted on minter`);
+   
+});
   });
   describe("buy", () => {
   it("Should buy", async () => {
@@ -318,7 +352,24 @@ describe("allowance", () => {
     console.debug("\t\t\tOWNER earned Balance:", earned.toString());
     await time.increase(DAY * 30);
     });
+    it("transfer to addr1", async () => {
+
+      let tokenbalance = await token.balanceOf(owner.address)
+      tokenbalance = tokenbalance/2
+
+      
+      
+      
+
+      await token.connect(owner).transfer(addr1.address,  BigInt(tokenbalance))
+    const tokenBalance = await token.balanceOf(addr1.address);
+  
+    console.debug(`\t\t\taddr1 token balance: ${yellow}`, tokenBalance);
+  
+    });
   });
+
+  
 
 
 

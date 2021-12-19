@@ -2,17 +2,23 @@
 pragma solidity ^0.6.12;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -34,17 +40,19 @@ pragma solidity ^0.6.12;
 
 import "@pancakeswap/pancake-swap-lib/contracts/access/Ownable.sol";
 
-
 contract Whitelist is Ownable {
     mapping(address => bool) private _whitelist;
-    bool private _disable;                      // default - false means whitelist feature is working on. if true no more use of whitelist
+    bool private _disable; // default - false means whitelist feature is working on. if true no more use of whitelist
 
     event Whitelisted(address indexed _address, bool whitelist);
     event EnableWhitelist();
     event DisableWhitelist();
 
-    modifier onlyWhitelisted {
-        require(_disable || _whitelist[msg.sender], "Whitelist: caller is not on the whitelist");
+    modifier onlyWhitelisted() {
+        require(
+            _disable || _whitelist[msg.sender],
+            "Whitelist: caller is not on the whitelist"
+        );
         _;
     }
 

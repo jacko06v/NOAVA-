@@ -3,17 +3,23 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -35,48 +41,76 @@ pragma experimental ABIEncoderV2;
 
 interface IStrategyLegacy {
     struct Profit {
-        uint usd;
-        uint bunny;
-        uint bnb;
+        uint256 usd;
+        uint256 noava;
+        uint256 bnb;
     }
 
     struct APY {
-        uint usd;
-        uint bunny;
-        uint bnb;
+        uint256 usd;
+        uint256 noava;
+        uint256 bnb;
     }
 
     struct UserInfo {
-        uint balance;
-        uint principal;
-        uint available;
+        uint256 balance;
+        uint256 principal;
+        uint256 available;
         Profit profit;
-        uint poolTVL;
+        uint256 poolTVL;
         APY poolAPY;
     }
 
-    function deposit(uint _amount) external;
+    function deposit(uint256 _amount) external;
+
     function depositAll() external;
-    function withdraw(uint256 _amount) external;    // BUNNY STAKING POOL ONLY
+
+    function withdraw(uint256 _amount) external; // NOAVA STAKING POOL ONLY
+
     function withdrawAll() external;
-    function getReward() external;                  // BUNNY STAKING POOL ONLY
+
+    function getReward() external; // NOAVA STAKING POOL ONLY
+
     function harvest() external;
 
-    function balance() external view returns (uint);
-    function balanceOf(address account) external view returns (uint);
-    function principalOf(address account) external view returns (uint);
-    function withdrawableBalanceOf(address account) external view returns (uint);   // BUNNY STAKING POOL ONLY
-    function profitOf(address account) external view returns (uint _usd, uint _bunny, uint _bnb);
-//    function earned(address account) external view returns (uint);
-    function tvl() external view returns (uint);    // in USD
-    function apy() external view returns (uint _usd, uint _bunny, uint _bnb);
+    function balance() external view returns (uint256);
+
+    function balanceOf(address account) external view returns (uint256);
+
+    function principalOf(address account) external view returns (uint256);
+
+    function withdrawableBalanceOf(address account)
+        external
+        view
+        returns (uint256); // NOAVA STAKING POOL ONLY
+
+    function profitOf(address account)
+        external
+        view
+        returns (
+            uint256 _usd,
+            uint256 _noava,
+            uint256 _bnb
+        );
+
+    //    function earned(address account) external view returns (uint);
+    function tvl() external view returns (uint256); // in USD
+
+    function apy()
+        external
+        view
+        returns (
+            uint256 _usd,
+            uint256 _noava,
+            uint256 _bnb
+        );
 
     /* ========== Strategy Information ========== */
-//    function pid() external view returns (uint);
-//    function poolType() external view returns (PoolTypes);
-//    function isMinter() external view returns (bool, address);
-//    function getDepositedAt(address account) external view returns (uint);
-//    function getRewardsToken() external view returns (address);
+    //    function pid() external view returns (uint);
+    //    function poolType() external view returns (PoolTypes);
+    //    function isMinter() external view returns (bool, address);
+    //    function getDepositedAt(address account) external view returns (uint);
+    //    function getRewardsToken() external view returns (address);
 
     function info(address account) external view returns (UserInfo memory);
 }

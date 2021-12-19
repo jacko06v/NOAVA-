@@ -2,17 +2,25 @@
 pragma solidity ^0.6.12;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
+
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -37,31 +45,27 @@ import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/BEP20.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
 import "hardhat/console.sol";
-import "../interfaces/IBunnyMinterV2.sol";
-import "../interfaces/IBunnyPool.sol";
+import "../interfaces/INoavaMinterV2.sol";
+import "../interfaces/INoavaPool.sol";
 import "../interfaces/IPriceCalculator.sol";
 
 import "../zap/ZapBSC.sol";
 import "../library/SafeToken.sol";
 
-contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
+contract NoavaMinterV2 is INoavaMinterV2, OwnableUpgradeable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 
     /* ========== CONSTANTS ============= */
 
     address public constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    address public BUNNY;
-    address public constant BUNNY_POOL_V1 =
-        0xCADc8CB26c8C7cB46500E61171b5F27e9bd7889D;
+    address public NOAVA;
+    address public NOAVA_POOL_V1;
 
-    address public constant FEE_BOX =
-        0x3749f69B2D99E5586D95d95B6F9B5252C71894bb;
-    address private constant TIMELOCK =
-        0x85c9162A51E03078bdCd08D4232Bab13ed414cC3;
+    address public FEE_BOX;
+    address private TIMELOCK;
     address private constant DEAD = 0x000000000000000000000000000000000000dEaD;
-    address private constant DEPLOYER =
-        0xe87f02606911223C2Cf200398FFAF353f60801F7;
+    address private DEPLOYER;
 
     uint256 public constant FEE_MAX = 10000;
 
@@ -72,7 +76,7 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
 
     /* ========== STATE VARIABLES ========== */
 
-    address public bunnyChef;
+    address public noavaChef;
     mapping(address => bool) public _minters;
     address public _deprecated_helper; // deprecated
 
@@ -80,28 +84,28 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
     uint256 public override WITHDRAWAL_FEE_FREE_PERIOD;
     uint256 public override WITHDRAWAL_FEE;
 
-    uint256 public _deprecated_bunnyPerProfitBNB; // deprecated
-    uint256 public _deprecated_bunnyPerBunnyBNBFlip; // deprecated
+    uint256 public _deprecated_noavaPerProfitBNB; // deprecated
+    uint256 public _deprecated_noavaPerNoavaBNBFlip; // deprecated
 
     uint256 private _floatingRateEmission;
     uint256 private _freThreshold;
 
-    address public bunnyPool;
+    address public noavaPool;
 
     /* ========== MODIFIERS ========== */
 
     modifier onlyMinter() {
         require(
             isMinter(msg.sender) == true,
-            "BunnyMinterV2: caller is not the minter"
+            "NoavaMinterV2: caller is not the minter"
         );
         _;
     }
 
-    modifier onlyBunnyChef() {
+    modifier onlyNoavaChef() {
         require(
-            msg.sender == bunnyChef,
-            "BunnyMinterV2: caller not the bunny chef"
+            msg.sender == noavaChef,
+            "NoavaMinterV2: caller not the noava chef"
         );
         _;
     }
@@ -117,26 +121,34 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
     function initialize(
         address _token,
         ZapBSC _zap,
-        IPriceCalculator _pricecal
+        IPriceCalculator _pricecal,
+        address _pair,
+        address _lock,
+        address _feeBox,
+        address _deployer
     ) external initializer {
         WITHDRAWAL_FEE_FREE_PERIOD = 3 days;
         WITHDRAWAL_FEE = 50;
         PERFORMANCE_FEE = 3000;
+        NOAVA_POOL_V1 = _pair;
+        FEE_BOX = _feeBox;
+        TIMELOCK = _lock;
+        DEPLOYER = _deployer;
 
-        _deprecated_bunnyPerProfitBNB = 5e18;
-        _deprecated_bunnyPerBunnyBNBFlip = 6e18;
+        _deprecated_noavaPerProfitBNB = 5e18;
+        _deprecated_noavaPerNoavaBNBFlip = 6e18;
         __Ownable_init();
-        BUNNY = _token;
+        NOAVA = _token;
         zap = ZapBSC(_zap);
         priceCalculator = _pricecal;
 
-        IBEP20(_token).approve(BUNNY_POOL_V1, uint256(-1));
+        IBEP20(_token).approve(NOAVA_POOL_V1, uint256(-1));
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function transferBunnyOwner(address _owner) external onlyOwner {
-        Ownable(BUNNY).transferOwnership(_owner);
+    function transferNoavaOwner(address _owner) external onlyOwner {
+        Ownable(NOAVA).transferOwnership(_owner);
     }
 
     function setWithdrawalFee(uint256 _fee) external onlyOwner {
@@ -166,12 +178,12 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
         }
     }
 
-    function setBunnyChef(address _bunnyChef) external onlyOwner {
+    function setNoavaChef(address _noavaChef) external onlyOwner {
         require(
-            bunnyChef == address(0),
-            "BunnyMinterV2: setBunnyChef only once"
+            noavaChef == address(0),
+            "NoavaMinterV2: setNoavaChef only once"
         );
-        bunnyChef = _bunnyChef;
+        noavaChef = _noavaChef;
     }
 
     function setFloatingRateEmission(uint256 floatingRateEmission)
@@ -180,7 +192,7 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
     {
         require(
             floatingRateEmission > 1e18 && floatingRateEmission < 10e18,
-            "BunnyMinterV2: floatingRateEmission wrong range"
+            "NoavaMinterV2: floatingRateEmission wrong range"
         );
         _floatingRateEmission = floatingRateEmission;
     }
@@ -189,18 +201,18 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
         _freThreshold = threshold;
     }
 
-    function setBunnyPool(address _bunnyPool) external onlyOwner {
-        IBEP20(BUNNY).approve(BUNNY_POOL_V1, 0);
-        bunnyPool = _bunnyPool;
-        IBEP20(BUNNY).approve(_bunnyPool, uint256(-1));
+    function setNoavaPool(address _noavaPool) external onlyOwner {
+        IBEP20(NOAVA).approve(NOAVA_POOL_V1, 0);
+        noavaPool = _noavaPool;
+        IBEP20(NOAVA).approve(_noavaPool, uint256(-1));
     }
 
     /* ========== VIEWS ========== */
 
     function isMinter(address account) public view override returns (bool) {
         console.log("isMinter?");
-        console.log(BUNNY);
-        if (IBEP20(BUNNY).getOwner() != address(this)) {
+        console.log(NOAVA);
+        if (IBEP20(NOAVA).getOwner() != address(this)) {
             console.log("false");
             return false;
         }
@@ -210,25 +222,25 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
         return isTrue;
     }
 
-    function amountBunnyToMint(uint256 bnbProfit)
+    function amountNoavaToMint(uint256 bnbProfit)
         public
         view
         override
         returns (uint256)
     {
         console.log(priceCalculator.priceOfBNB());
-        console.log(priceCalculator.priceOfBunny());
+        console.log(priceCalculator.priceOfNoava());
         console.log(floatingRateEmission());
 
         return
             bnbProfit
                 .mul(priceCalculator.priceOfBNB())
-                .div(priceCalculator.priceOfBunny())
+                .div(priceCalculator.priceOfNoava())
                 .mul(floatingRateEmission())
                 .div(1e18);
     }
 
-    function amountBunnyToMintForBunnyBNB(uint256 amount, uint256 duration)
+    function amountNoavaToMintForNoavaBNB(uint256 amount, uint256 duration)
         public
         view
         override
@@ -236,7 +248,7 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
     {
         return
             amount
-                .mul(_deprecated_bunnyPerBunnyBNBFlip)
+                .mul(_deprecated_noavaPerNoavaBNBFlip)
                 .mul(duration)
                 .div(365 days)
                 .div(1e18);
@@ -274,7 +286,7 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
 
     function shouldMarketBuy() public view returns (bool) {
         return
-            priceCalculator.priceOfBunny().mul(freThreshold()).div(
+            priceCalculator.priceOfNoava().mul(freThreshold()).div(
                 priceCalculator.priceOfBNB()
             ) < 1e18;
     }
@@ -294,9 +306,9 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
         _transferAsset(asset, feeSum);
         console.log("mint for 3");
 
-        if (asset == BUNNY) {
+        if (asset == NOAVA) {
             console.log("mint for if 1");
-            IBEP20(BUNNY).safeTransfer(DEAD, feeSum);
+            IBEP20(NOAVA).safeTransfer(DEAD, feeSum);
             console.log("mint for if 2");
             return;
         }
@@ -346,10 +358,10 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
         (uint256 contributionInBNB, uint256 contributionInUSD) = priceCalculator
             .valueOfAsset(asset, _performanceFee);
         console.log("mint for value ok");
-        uint256 mintBunny = amountBunnyToMint(contributionInBNB);
+        uint256 mintNoava = amountNoavaToMint(contributionInBNB);
         console.log("mint for amount to mint ok");
-        if (mintBunny == 0) return;
-        _mint(mintBunny, to);
+        if (mintNoava == 0) return;
+        _mint(mintNoava, to);
 
         if (marketBuy) {
             console.log("sbaglia proprio qui");
@@ -375,29 +387,29 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
         mintFor(asset, _withdrawalFee, _performanceFee, to, timestamp);
     }
 
-    /* ========== BunnyChef FUNCTIONS ========== */
+    /* ========== NoavaChef FUNCTIONS ========== */
 
-    function mint(uint256 amount) external override onlyBunnyChef {
+    function mint(uint256 amount) external override onlyNoavaChef {
         if (amount == 0) return;
         _mint(amount, address(this));
     }
 
-    function safeBunnyTransfer(address _to, uint256 _amount)
+    function safeNoavaTransfer(address _to, uint256 _amount)
         external
         override
-        onlyBunnyChef
+        onlyNoavaChef
     {
         if (_amount == 0) return;
 
-        uint256 bal = IBEP20(BUNNY).balanceOf(address(this));
+        uint256 bal = IBEP20(NOAVA).balanceOf(address(this));
         if (_amount <= bal) {
-            IBEP20(BUNNY).safeTransfer(_to, _amount);
+            IBEP20(NOAVA).safeTransfer(_to, _amount);
         } else {
-            IBEP20(BUNNY).safeTransfer(_to, bal);
+            IBEP20(NOAVA).safeTransfer(_to, bal);
         }
     }
 
-    // @dev should be called when determining mint in governance. Bunny is transferred to the timelock contract.
+    // @dev should be called when determining mint in governance. Noava is transferred to the timelock contract.
     function mintGov(uint256 amount) external override onlyOwner {
         if (amount == 0) return;
         _mint(amount, TIMELOCK);
@@ -411,11 +423,11 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
         address to
     ) private {
         console.log("marketBuy");
-        uint256 _initBunnyAmount = IBEP20(BUNNY).balanceOf(address(this));
+        uint256 _initNoavaAmount = IBEP20(NOAVA).balanceOf(address(this));
         console.log("marketBuy 1");
         if (asset == address(0)) {
             console.log("marketBuy zap");
-            zap.zapIn{value: amount}(BUNNY);
+            zap.zapIn{value: amount}(NOAVA);
         } else if (
             keccak256(abi.encodePacked(IPancakePair(asset).symbol())) ==
             keccak256("Cake-LP")
@@ -452,12 +464,12 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
                 IBEP20(token1).safeApprove(address(zap), uint256(-1));
             }
 
-            if (token0 != BUNNY) {
-                zap.zapInToken(token0, amountToken0, BUNNY);
+            if (token0 != NOAVA) {
+                zap.zapInToken(token0, amountToken0, NOAVA);
             }
 
-            if (token1 != BUNNY) {
-                zap.zapInToken(token1, amountToken1, BUNNY);
+            if (token1 != NOAVA) {
+                zap.zapInToken(token1, amountToken1, NOAVA);
             }
         } else {
             console.log("marketBuy else");
@@ -467,13 +479,13 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
                 console.log("marketBuy else if 1");
             }
 
-            zap.zapInToken(asset, amount, BUNNY);
+            zap.zapInToken(asset, amount, NOAVA);
         }
 
-        uint256 bunnyAmount = IBEP20(BUNNY).balanceOf(address(this)).sub(
-            _initBunnyAmount
+        uint256 noavaAmount = IBEP20(NOAVA).balanceOf(address(this)).sub(
+            _initNoavaAmount
         );
-        IBEP20(BUNNY).safeTransfer(to, bunnyAmount);
+        IBEP20(NOAVA).safeTransfer(to, noavaAmount);
     }
 
     function _transferAsset(address asset, uint256 amount) private {
@@ -486,19 +498,19 @@ contract BunnyMinterV2 is IBunnyMinterV2, OwnableUpgradeable {
     }
 
     function _mint(uint256 amount, address to) private {
-        BEP20 tokenBUNNY = BEP20(BUNNY);
+        BEP20 tokenNOAVA = BEP20(NOAVA);
 
-        tokenBUNNY.mint(amount);
+        tokenNOAVA.mint(amount);
         if (to != address(this)) {
-            tokenBUNNY.transfer(to, amount);
+            tokenNOAVA.transfer(to, amount);
         }
 
-        uint256 bunnyForDev = amount.mul(15).div(100);
-        tokenBUNNY.mint(bunnyForDev);
-        if (bunnyPool == address(0)) {
-            tokenBUNNY.transfer(DEPLOYER, bunnyForDev);
+        uint256 noavaForDev = amount.mul(15).div(100);
+        tokenNOAVA.mint(noavaForDev);
+        if (noavaPool == address(0)) {
+            tokenNOAVA.transfer(DEPLOYER, noavaForDev);
         } else {
-            IBunnyPool(bunnyPool).depositOnBehalf(bunnyForDev, DEPLOYER);
+            INoavaPool(noavaPool).depositOnBehalf(noavaForDev, DEPLOYER);
         }
     }
 }

@@ -3,17 +3,23 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -38,17 +44,24 @@ import "../library/PoolConstant.sol";
 import "./IVaultController.sol";
 
 interface IStrategyCompact is IVaultController {
-
     /* ========== Dashboard ========== */
 
-    function balance() external view returns (uint);
-    function balanceOf(address account) external view returns(uint);
-    function principalOf(address account) external view returns (uint);
-    function withdrawableBalanceOf(address account) external view returns (uint);
-    function earned(address account) external view returns (uint);
-    function priceShare() external view returns (uint);
-    function depositedAt(address account) external view returns (uint);
+    function balance() external view returns (uint256);
+
+    function balanceOf(address account) external view returns (uint256);
+
+    function principalOf(address account) external view returns (uint256);
+
+    function withdrawableBalanceOf(address account)
+        external
+        view
+        returns (uint256);
+
+    function earned(address account) external view returns (uint256);
+
+    function priceShare() external view returns (uint256);
+
+    function depositedAt(address account) external view returns (uint256);
+
     function rewardsToken() external view returns (address);
-
-
 }

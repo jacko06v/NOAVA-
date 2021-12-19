@@ -3,17 +3,23 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -34,36 +40,59 @@ pragma experimental ABIEncoderV2;
 * SOFTWARE.
 */
 
-
 interface IVaultQubitBridge {
-
     struct MarketInfo {
         address token;
         address qToken;
-        uint available;
-        uint qTokenAmount;
-        uint principal;
-        uint rewardsDuration;
+        uint256 available;
+        uint256 qTokenAmount;
+        uint256 principal;
+        uint256 rewardsDuration;
     }
 
     function infoOf(address vault) external view returns (MarketInfo memory);
-    function availableOf(address vault) external view returns (uint);
-    function snapshotOf(address vault) external view returns (uint vaultSupply, uint vaultBorrow);
-    function borrowableOf(address vault, uint collateralRatioLimit) external view returns (uint);
-    function redeemableOf(address vault, uint collateralRatioLimit) external view returns (uint);
-    function leverageRoundOf(address vault, uint round) external view returns (uint);
-    function getBoostRatio(address vault) external view returns (uint);
 
-    function deposit(address vault, uint amount) external payable;
-    function withdraw(uint amount, address to) external;
-    function harvest() external returns (uint);
-    function lockup(uint _amount) external;
+    function availableOf(address vault) external view returns (uint256);
 
-    function supply(uint amount) external;
-    function redeemUnderlying(uint amount) external;
+    function snapshotOf(address vault)
+        external
+        view
+        returns (uint256 vaultSupply, uint256 vaultBorrow);
+
+    function borrowableOf(address vault, uint256 collateralRatioLimit)
+        external
+        view
+        returns (uint256);
+
+    function redeemableOf(address vault, uint256 collateralRatioLimit)
+        external
+        view
+        returns (uint256);
+
+    function leverageRoundOf(address vault, uint256 round)
+        external
+        view
+        returns (uint256);
+
+    function getBoostRatio(address vault) external view returns (uint256);
+
+    function deposit(address vault, uint256 amount) external payable;
+
+    function withdraw(uint256 amount, address to) external;
+
+    function harvest() external returns (uint256);
+
+    function lockup(uint256 _amount) external;
+
+    function supply(uint256 amount) external;
+
+    function redeemUnderlying(uint256 amount) external;
+
     function redeemAll() external;
-    function borrow(uint amount) external;
-    function repayBorrow(uint amount) external;
 
-    function updateRewardsDuration(uint _rewardsDuration) external;
+    function borrow(uint256 amount) external;
+
+    function repayBorrow(uint256 amount) external;
+
+    function updateRewardsDuration(uint256 _rewardsDuration) external;
 }

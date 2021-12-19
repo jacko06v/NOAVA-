@@ -3,6 +3,20 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
+
+
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
+
  *
  * MIT License
  * ===========
@@ -88,7 +102,7 @@ contract PriceCalculatorBSC is IPriceCalculator, OwnableUpgradeable {
         return uint256(price).mul(1e10);
     }
 
-    function priceOfBunny() external view override returns (uint256) {
+    function priceOfNoava() external view override returns (uint256) {
         (, uint256 pinkPriceInUSD) = valueOfAsset(pinkToken, 1e18);
         return pinkPriceInUSD;
     }

@@ -3,17 +3,23 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -37,25 +43,44 @@ pragma experimental ABIEncoderV2;
 import "./IStrategyCompact.sol";
 
 interface IStrategy is IStrategyCompact {
-
     // rewardsToken
-    function sharesOf(address account) external view returns (uint);
-    function deposit(uint _amount) external;
-    function withdraw(uint _amount) external;
+    function sharesOf(address account) external view returns (uint256);
+
+    function deposit(uint256 _amount) external;
+
+    function withdraw(uint256 _amount) external;
 
     /* ========== Interface ========== */
 
     function depositAll() external;
+
     function withdrawAll() external;
+
     function getReward() external;
+
     function harvest() external;
-    function pid() external view returns (uint);
-    function totalSupply() external view returns (uint);
+
+    function pid() external view returns (uint256);
+
+    function totalSupply() external view returns (uint256);
+
     function poolType() external view returns (PoolConstant.PoolTypes);
 
-    event Deposited(address indexed user, uint amount);
-    event Withdrawn(address indexed user, uint amount, uint withdrawalFee);
-    event ProfitPaid(address indexed user, uint profit, uint performanceFee);
-    event BunnyPaid(address indexed user, uint profit, uint performanceFee);
-    event Harvested(uint profit);
+    event Deposited(address indexed user, uint256 amount);
+    event Withdrawn(
+        address indexed user,
+        uint256 amount,
+        uint256 withdrawalFee
+    );
+    event ProfitPaid(
+        address indexed user,
+        uint256 profit,
+        uint256 performanceFee
+    );
+    event NoavaPaid(
+        address indexed user,
+        uint256 profit,
+        uint256 performanceFee
+    );
+    event Harvested(uint256 profit);
 }

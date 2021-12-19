@@ -37,83 +37,83 @@ pragma experimental ABIEncoderV2;
 * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 
-import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
+import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {PoolConstant} from "../library/PoolConstant.sol";
-import "../interfaces/IPancakePair.sol";
-import "../interfaces/IPancakeFactory.sol";
-import "../interfaces/IStrategy.sol";
-import "../interfaces/IMasterChef.sol";
-import "../interfaces/INoavaMinter.sol";
 
-import "../zap/ZapBSC.sol";
+import "../interfaces/IStrategy.sol";
+import "../interfaces/INoavaMinter.sol";
+import "../interfaces/INoavaChef.sol";
+import "../interfaces/INoavaPool.sol";
+import "../interfaces/IZap.sol";
+
 import "./VaultController.sol";
 
-contract VaultFlipToFlip is VaultController, IStrategy {
-    using SafeBEP20 for IBEP20;
+contract VaultNoavaMaximizer is
+    VaultController,
+    IStrategy,
+    ReentrancyGuardUpgradeable
+{
     using SafeMath for uint256;
+    using SafeBEP20 for IBEP20;
 
     /* ========== CONSTANTS ============= */
 
-    IBEP20 private constant CAKE =
-        IBEP20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
-    IBEP20 private constant WBNB =
-        IBEP20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
-    IMasterChef private constant CAKE_MASTER_CHEF =
-        IMasterChef(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
-    PoolConstant.PoolTypes public constant override poolType =
-        PoolConstant.PoolTypes.FlipToFlip;
+    address private constant NOAVA = 0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51;
+    address private constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    address private constant CAKE = 0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82;
 
-    ZapBSC public constant zapBSC =
-        ZapBSC(0xdC2bBB0D33E0e7Dea9F5b98F46EDBaC823586a0C);
+    PoolConstant.PoolTypes public constant override poolType =
+        PoolConstant.PoolTypes.NoavaToNoava;
+    IZap public constant zap = IZap(0xdC2bBB0D33E0e7Dea9F5b98F46EDBaC823586a0C);
+
+    address public constant FEE_BOX =
+        0x3749f69B2D99E5586D95d95B6F9B5252C71894bb;
+    address private constant NOAVA_POOL_V1 =
+        0xCADc8CB26c8C7cB46500E61171b5F27e9bd7889D;
 
     uint256 private constant DUST = 1000;
 
+    uint256 public constant override pid = 9999;
+
     /* ========== STATE VARIABLES ========== */
 
-    uint256 public override pid;
-
-    address private _token0;
-    address private _token1;
-
-    uint256 public totalShares;
+    uint256 private totalShares;
     mapping(address => uint256) private _shares;
     mapping(address => uint256) private _principal;
     mapping(address => uint256) private _depositedAt;
 
-    uint256 public cakeHarvested;
-
-    /* ========== MODIFIER ========== */
-
-    modifier updateCakeHarvested() {
-        uint256 before = CAKE.balanceOf(address(this));
-        _;
-        uint256 _after = CAKE.balanceOf(address(this));
-        cakeHarvested = cakeHarvested.add(_after).sub(before);
-    }
+    address private _noavaPool;
 
     /* ========== INITIALIZER ========== */
 
-    function initialize(uint256 _pid, address _token) external initializer {
-        __VaultController_init(IBEP20(_token));
+    receive() external payable {}
 
-        _stakingToken.safeApprove(address(CAKE_MASTER_CHEF), uint256(-1));
-        pid = _pid;
+    function initialize() external initializer {
+        __VaultController_init(IBEP20(NOAVA));
+        __ReentrancyGuard_init();
 
-        CAKE.safeApprove(address(zapBSC), uint256(-1));
+        setMinter(0x8cB88701790F650F273c8BB2Cc4c5f439cd65219);
     }
 
-    /* ========== VIEW FUNCTIONS ========== */
+    /* ========== VIEWS ========== */
 
     function totalSupply() external view override returns (uint256) {
         return totalShares;
     }
 
-    function balance() public view override returns (uint256 amount) {
-        (amount, ) = CAKE_MASTER_CHEF.userInfo(pid, address(this));
+    function balance() public view override returns (uint256) {
+        if (_noavaPool == address(0)) {
+            return INoavaPool(NOAVA_POOL_V1).balanceOf(address(this));
+        }
+        return INoavaPool(_noavaPool).balanceOf(address(this));
     }
 
     function balanceOf(address account) public view override returns (uint256) {
@@ -161,7 +161,7 @@ contract VaultFlipToFlip is VaultController, IStrategy {
     }
 
     function rewardsToken() external view override returns (address) {
-        return address(_stakingToken);
+        return NOAVA;
     }
 
     function priceShare() external view override returns (uint256) {
@@ -171,8 +171,8 @@ contract VaultFlipToFlip is VaultController, IStrategy {
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function deposit(uint256 _amount) public override {
-        _depositTo(_amount, msg.sender);
+    function deposit(uint256 amount) public override {
+        _deposit(amount, msg.sender);
     }
 
     function depositAll() external override {
@@ -180,6 +180,10 @@ contract VaultFlipToFlip is VaultController, IStrategy {
     }
 
     function withdrawAll() external override {
+        require(
+            _noavaPool != address(0),
+            "VaultNoavaMaximizer: NoavaPool must set"
+        );
         uint256 amount = balanceOf(msg.sender);
         uint256 principal = principalOf(msg.sender);
         uint256 depositTimestamp = _depositedAt[msg.sender];
@@ -189,47 +193,48 @@ contract VaultFlipToFlip is VaultController, IStrategy {
         delete _principal[msg.sender];
         delete _depositedAt[msg.sender];
 
-        amount = _withdrawTokenWithCorrection(amount);
-        uint256 profit = amount > principal ? amount.sub(principal) : 0;
+        INoavaPool(_noavaPool).withdraw(amount);
 
-        uint256 withdrawalFee = canMint()
-            ? _minter.withdrawalFee(principal, depositTimestamp)
-            : 0;
-        uint256 performanceFee = canMint() ? _minter.performanceFee(profit) : 0;
-        if (withdrawalFee.add(performanceFee) > DUST) {
-            _minter.mintForV2(
-                address(_stakingToken),
-                withdrawalFee,
-                performanceFee,
-                msg.sender,
-                depositTimestamp
-            );
-
-            if (performanceFee > 0) {
-                emit ProfitPaid(msg.sender, profit, performanceFee);
-            }
-            amount = amount.sub(withdrawalFee).sub(performanceFee);
+        uint256 withdrawalFee = _minter.withdrawalFee(
+            principal,
+            depositTimestamp
+        );
+        if (withdrawalFee > 0) {
+            _stakingToken.safeTransfer(FEE_BOX, withdrawalFee);
+            amount = amount.sub(withdrawalFee);
         }
 
         _stakingToken.safeTransfer(msg.sender, amount);
         emit Withdrawn(msg.sender, amount, withdrawalFee);
     }
 
-    function harvest() external override onlyKeeper {
-        _harvest();
+    function harvest() public override onlyKeeper {
+        require(
+            _noavaPool != address(0),
+            "VaultNoavaMaximizer: NoavaPool must set"
+        );
+        uint256 before = IBEP20(NOAVA).balanceOf(address(this));
+        uint256 beforeBNB = address(this).balance;
+        uint256 beforeCAKE = IBEP20(CAKE).balanceOf(address(this));
 
-        uint256 before = _stakingToken.balanceOf(address(this));
-        zapBSC.zapInToken(address(CAKE), cakeHarvested, address(_stakingToken));
-        uint256 harvested = _stakingToken.balanceOf(address(this)).sub(before);
+        INoavaPool(_noavaPool).getReward(); // BNB, CAKE, NOAVA
 
-        CAKE_MASTER_CHEF.deposit(pid, harvested);
+        if (address(this).balance.sub(beforeBNB) > 0) {
+            zap.zapIn{value: address(this).balance.sub(beforeBNB)}(NOAVA);
+        }
+
+        if (IBEP20(CAKE).balanceOf(address(this)).sub(beforeCAKE) > 0) {
+            zap.zapInToken(
+                CAKE,
+                IBEP20(CAKE).balanceOf(address(this)).sub(beforeCAKE),
+                NOAVA
+            );
+        }
+
+        uint256 harvested = IBEP20(NOAVA).balanceOf(address(this)).sub(before);
         emit Harvested(harvested);
 
-        cakeHarvested = 0;
-    }
-
-    function _harvest() private updateCakeHarvested {
-        CAKE_MASTER_CHEF.withdraw(pid, 0);
+        INoavaPool(_noavaPool).deposit(harvested);
     }
 
     function withdraw(uint256) external override onlyWhitelisted {
@@ -239,6 +244,10 @@ contract VaultFlipToFlip is VaultController, IStrategy {
 
     // @dev underlying only + withdrawal fee + no perf fee
     function withdrawUnderlying(uint256 _amount) external {
+        require(
+            _noavaPool != address(0),
+            "VaultNoavaMaximizer: NoavaPool must set"
+        );
         uint256 amount = Math.min(_amount, _principal[msg.sender]);
         uint256 shares = Math.min(
             amount.mul(totalShares).div(balance()),
@@ -248,19 +257,12 @@ contract VaultFlipToFlip is VaultController, IStrategy {
         _shares[msg.sender] = _shares[msg.sender].sub(shares);
         _principal[msg.sender] = _principal[msg.sender].sub(amount);
 
-        amount = _withdrawTokenWithCorrection(amount);
+        INoavaPool(_noavaPool).withdraw(amount);
+
         uint256 depositTimestamp = _depositedAt[msg.sender];
-        uint256 withdrawalFee = canMint()
-            ? _minter.withdrawalFee(amount, depositTimestamp)
-            : 0;
-        if (withdrawalFee > DUST) {
-            _minter.mintForV2(
-                address(_stakingToken),
-                withdrawalFee,
-                0,
-                msg.sender,
-                depositTimestamp
-            );
+        uint256 withdrawalFee = _minter.withdrawalFee(amount, depositTimestamp);
+        if (withdrawalFee > 0) {
+            _stakingToken.safeTransfer(FEE_BOX, withdrawalFee);
             amount = amount.sub(withdrawalFee);
         }
 
@@ -268,8 +270,11 @@ contract VaultFlipToFlip is VaultController, IStrategy {
         emit Withdrawn(msg.sender, amount, withdrawalFee);
     }
 
-    // @dev profits only (underlying + noava) + no withdraw fee + perf fee
-    function getReward() external override {
+    function getReward() public override nonReentrant {
+        require(
+            _noavaPool != address(0),
+            "VaultNoavaMaximizer: NoavaPool must set"
+        );
         uint256 amount = earned(msg.sender);
         uint256 shares = Math.min(
             amount.mul(totalShares).div(balance()),
@@ -279,60 +284,10 @@ contract VaultFlipToFlip is VaultController, IStrategy {
         _shares[msg.sender] = _shares[msg.sender].sub(shares);
         _cleanupIfDustShares();
 
-        amount = _withdrawTokenWithCorrection(amount);
-        uint256 depositTimestamp = _depositedAt[msg.sender];
-        uint256 performanceFee = canMint() ? _minter.performanceFee(amount) : 0;
-        if (performanceFee > DUST) {
-            _minter.mintForV2(
-                address(_stakingToken),
-                0,
-                performanceFee,
-                msg.sender,
-                depositTimestamp
-            );
-            amount = amount.sub(performanceFee);
-        }
+        INoavaPool(_noavaPool).withdraw(amount);
 
         _stakingToken.safeTransfer(msg.sender, amount);
-        emit ProfitPaid(msg.sender, amount, performanceFee);
-    }
-
-    /* ========== PRIVATE FUNCTIONS ========== */
-
-    function _depositTo(uint256 _amount, address _to)
-        private
-        notPaused
-        updateCakeHarvested
-    {
-        uint256 _pool = balance();
-        uint256 _before = _stakingToken.balanceOf(address(this));
-        _stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 _after = _stakingToken.balanceOf(address(this));
-        _amount = _after.sub(_before); // Additional check for deflationary tokens
-        uint256 shares = 0;
-        if (totalShares == 0) {
-            shares = _amount;
-        } else {
-            shares = (_amount.mul(totalShares)).div(_pool);
-        }
-
-        totalShares = totalShares.add(shares);
-        _shares[_to] = _shares[_to].add(shares);
-        _principal[_to] = _principal[_to].add(_amount);
-        _depositedAt[_to] = block.timestamp;
-
-        CAKE_MASTER_CHEF.deposit(pid, _amount);
-        emit Deposited(_to, _amount);
-    }
-
-    function _withdrawTokenWithCorrection(uint256 amount)
-        private
-        updateCakeHarvested
-        returns (uint256)
-    {
-        uint256 before = _stakingToken.balanceOf(address(this));
-        CAKE_MASTER_CHEF.withdraw(pid, amount);
-        return _stakingToken.balanceOf(address(this)).sub(before);
+        emit ProfitPaid(msg.sender, amount, 0);
     }
 
     function _cleanupIfDustShares() private {
@@ -343,23 +298,71 @@ contract VaultFlipToFlip is VaultController, IStrategy {
         }
     }
 
+    /* ========== RESTRICTED FUNCTIONS ========== */
+
+    function setNoavaPool(address noavaPool) external onlyOwner {
+        if (_noavaPool != address(0)) {
+            _stakingToken.approve(_noavaPool, 0);
+        }
+
+        _noavaPool = noavaPool;
+
+        _stakingToken.approve(_noavaPool, uint256(-1));
+        if (IBEP20(CAKE).allowance(address(this), address(zap)) == 0) {
+            IBEP20(CAKE).approve(address(zap), uint256(-1));
+        }
+    }
+
+    /* ========== PRIVATE FUNCTIONS ========== */
+
+    function _deposit(uint256 _amount, address _to)
+        private
+        nonReentrant
+        notPaused
+    {
+        require(
+            _noavaPool != address(0),
+            "VaultNoavaMaximizer: NoavaPool must set"
+        );
+        uint256 _pool = balance();
+        _stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 shares = totalShares == 0
+            ? _amount
+            : (_amount.mul(totalShares)).div(_pool);
+
+        totalShares = totalShares.add(shares);
+        _shares[_to] = _shares[_to].add(shares);
+        _principal[_to] = _principal[_to].add(_amount);
+        _depositedAt[_to] = block.timestamp;
+
+        INoavaPool(_noavaPool).deposit(_amount);
+        emit Deposited(_to, _amount);
+    }
+
     /* ========== SALVAGE PURPOSE ONLY ========== */
 
-    // @dev stakingToken must not remain balance in this contract. So dev should salvage staking token transferred by mistake.
-    function recoverToken(address token, uint256 amount)
+    function recoverToken(address tokenAddress, uint256 tokenAmount)
         external
         override
         onlyOwner
     {
-        if (token == address(CAKE)) {
-            uint256 cakeBalance = CAKE.balanceOf(address(this));
-            require(
-                amount <= cakeBalance.sub(cakeHarvested),
-                "VaultFlipToFlip: cannot recover lp's harvested cake"
-            );
-        }
+        IBEP20(tokenAddress).safeTransfer(owner(), tokenAmount);
+        emit Recovered(tokenAddress, tokenAmount);
+    }
 
-        IBEP20(token).safeTransfer(owner(), amount);
-        emit Recovered(token, amount);
+    /* ========== MIGRATION ========== */
+
+    function migrate() external onlyOwner {
+        require(
+            _noavaPool != address(0),
+            "VaultNoavaMaximizer: must set NoavaPool"
+        );
+        uint256 before = IBEP20(NOAVA).balanceOf(address(this));
+        INoavaPool(NOAVA_POOL_V1).withdrawAll(); // get NOAVA, WBNB
+
+        zap.zapInToken(WBNB, IBEP20(WBNB).balanceOf(address(this)), NOAVA);
+        INoavaPool(_noavaPool).deposit(
+            IBEP20(NOAVA).balanceOf(address(this)).sub(before)
+        );
     }
 }

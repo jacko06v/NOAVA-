@@ -2,17 +2,24 @@
 pragma solidity ^0.6.12;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -34,18 +41,16 @@ pragma solidity ^0.6.12;
 
 import "../library/bep20/BEP20Upgradeable.sol";
 
-
-contract PBunnyToken is BEP20Upgradeable {
-
+contract PNoavaToken is BEP20Upgradeable {
     /* ========== INITIALIZER ========== */
 
     function initialize() external initializer {
-        __BEP20__init("Platinum Bunny Token", "pBUNNY", 18);
+        __BEP20__init("Platinum Noava Token", "pNOAVA", 18);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
-    function mint(uint _amount) public onlyOwner {
+    function mint(uint256 _amount) public onlyOwner {
         _mint(owner(), _amount);
     }
 }

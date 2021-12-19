@@ -2,17 +2,23 @@
 pragma solidity ^0.6.12;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -32,37 +38,67 @@ pragma solidity ^0.6.12;
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 */
 
-
 interface IBank {
-    function pendingDebtOf(address pool, address account) external view returns (uint);
-    function pendingDebtOfBridge() external view returns (uint);
-    function sharesOf(address pool, address account) external view returns (uint);
-    function debtToProviders() external view returns (uint);
-    function getUtilizationInfo() external view returns (uint liquidity, uint utilized);
+    function pendingDebtOf(address pool, address account)
+        external
+        view
+        returns (uint256);
 
-    function shareToAmount(uint share) external view returns (uint);
-    function amountToShare(uint share) external view returns (uint);
+    function pendingDebtOfBridge() external view returns (uint256);
 
-    function accruedDebtOf(address pool, address account) external returns (uint debt);
-    function accruedDebtOfBridge() external returns (uint debt);
+    function sharesOf(address pool, address account)
+        external
+        view
+        returns (uint256);
+
+    function debtToProviders() external view returns (uint256);
+
+    function getUtilizationInfo()
+        external
+        view
+        returns (uint256 liquidity, uint256 utilized);
+
+    function shareToAmount(uint256 share) external view returns (uint256);
+
+    function amountToShare(uint256 share) external view returns (uint256);
+
+    function accruedDebtOf(address pool, address account)
+        external
+        returns (uint256 debt);
+
+    function accruedDebtOfBridge() external returns (uint256 debt);
+
     function executeAccrue() external;
 
-    function borrow(address pool, address account, uint amount) external returns (uint debtInBNB);
-//    function repayPartial(address pool, address account) external payable;
-    function repayAll(address pool, address account) external payable returns (uint profitInETH, uint lossInETH);
+    function borrow(
+        address pool,
+        address account,
+        uint256 amount
+    ) external returns (uint256 debtInBNB);
+
+    //    function repayPartial(address pool, address account) external payable;
+    function repayAll(address pool, address account)
+        external
+        payable
+        returns (uint256 profitInETH, uint256 lossInETH);
+
     function repayBridge() external payable;
 
-    function bridgeETH(address to, uint amount) external;
+    function bridgeETH(address to, uint256 amount) external;
 }
 
 interface IBankBridge {
-    function realizeProfit() external payable returns (uint profitInETH);
-    function realizeLoss(uint debt) external returns (uint lossInETH);
+    function realizeProfit() external payable returns (uint256 profitInETH);
+
+    function realizeLoss(uint256 debt) external returns (uint256 lossInETH);
 }
 
 interface IBankConfig {
     /// @dev Return the interest rate per second, using 1e18 as denom.
-    function getInterestRate(uint256 debt, uint256 floating) external view returns (uint256);
+    function getInterestRate(uint256 debt, uint256 floating)
+        external
+        view
+        returns (uint256);
 
     /// @dev Return the bps rate for reserve pool.
     function getReservePoolBps() external view returns (uint256);
@@ -70,5 +106,8 @@ interface IBankConfig {
 
 interface InterestModel {
     /// @dev Return the interest rate per second, using 1e18 as denom.
-    function getInterestRate(uint256 debt, uint256 floating) external view returns (uint256);
+    function getInterestRate(uint256 debt, uint256 floating)
+        external
+        view
+        returns (uint256);
 }

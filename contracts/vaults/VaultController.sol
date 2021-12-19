@@ -3,17 +3,23 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -41,8 +47,8 @@ import "../interfaces/IPancakeRouter02.sol";
 import "../interfaces/IPancakePair.sol";
 import "../interfaces/IStrategy.sol";
 import "../interfaces/IMasterChef.sol";
-import "../interfaces/IBunnyMinterV2.sol";
-import "../interfaces/IBunnyChef.sol";
+import "../interfaces/INoavaMinterV2.sol";
+import "../interfaces/INoavaChef.sol";
 import "../library/PausableUpgradeable.sol";
 import "../library/WhitelistUpgradeable.sol";
 
@@ -54,14 +60,14 @@ abstract contract VaultController is
     using SafeBEP20 for IBEP20;
 
     /* ========== CONSTANT VARIABLES ========== */
-    BEP20 private BUNNY = BEP20(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51);
+    BEP20 private NOAVA = BEP20(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51);
 
     /* ========== STATE VARIABLES ========== */
 
     address public keeper;
     IBEP20 internal _stakingToken;
-    IBunnyMinterV2 public _minter;
-    IBunnyChef internal _bunnyChef;
+    INoavaMinterV2 public _minter;
+    INoavaChef internal _noavaChef;
 
     /* ========== VARIABLE GAP ========== */
 
@@ -93,7 +99,7 @@ abstract contract VaultController is
     }
 
     function setToken(BEP20 _token) public onlyOwner {
-        BUNNY = _token;
+        NOAVA = _token;
     }
 
     /* ========== VIEWS FUNCTIONS ========== */
@@ -108,8 +114,8 @@ abstract contract VaultController is
             address(_minter) != address(0) && _minter.isMinter(address(this));
     }
 
-    function bunnyChef() external view override returns (address) {
-        return address(_bunnyChef);
+    function noavaChef() external view override returns (address) {
+        return address(_noavaChef);
     }
 
     function stakingToken() external view override returns (address) {
@@ -130,8 +136,8 @@ abstract contract VaultController is
         // can zero
         if (newMinter != address(0)) {
             require(
-                newMinter == BUNNY.getOwner(),
-                "VaultController: not bunny minter"
+                newMinter == NOAVA.getOwner(),
+                "VaultController: not noava minter"
             );
 
             _stakingToken.safeApprove(newMinter, 0);
@@ -141,15 +147,15 @@ abstract contract VaultController is
         if (address(_minter) != address(0))
             _stakingToken.safeApprove(address(_minter), 0);
 
-        _minter = IBunnyMinterV2(newMinter);
+        _minter = INoavaMinterV2(newMinter);
     }
 
-    function setBunnyChef(IBunnyChef newBunnyChef) public virtual onlyOwner {
+    function setNoavaChef(INoavaChef newNoavaChef) public virtual onlyOwner {
         require(
-            address(_bunnyChef) == address(0),
-            "VaultController: setBunnyChef only once"
+            address(_noavaChef) == address(0),
+            "VaultController: setNoavaChef only once"
         );
-        _bunnyChef = newBunnyChef;
+        _noavaChef = newNoavaChef;
     }
 
     /* ========== SALVAGE PURPOSE ONLY ========== */

@@ -2,17 +2,23 @@
 pragma solidity ^0.6.12;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -32,15 +38,23 @@ pragma solidity ^0.6.12;
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 */
 
-
 interface IPriceCalculator {
     struct ReferenceData {
-        uint lastData;
-        uint lastUpdated;
+        uint256 lastData;
+        uint256 lastUpdated;
     }
 
-    function pricesInUSD(address[] memory assets) external view returns (uint[] memory);
-    function valueOfAsset(address asset, uint amount) external view returns (uint valueInBNB, uint valueInUSD);
-    function priceOfBunny() view external returns (uint);
-    function priceOfBNB() view external returns (uint);
+    function pricesInUSD(address[] memory assets)
+        external
+        view
+        returns (uint256[] memory);
+
+    function valueOfAsset(address asset, uint256 amount)
+        external
+        view
+        returns (uint256 valueInBNB, uint256 valueInUSD);
+
+    function priceOfNoava() external view returns (uint256);
+
+    function priceOfBNB() external view returns (uint256);
 }

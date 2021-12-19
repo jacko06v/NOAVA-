@@ -3,17 +3,23 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /*
-  ___                      _   _
- | _ )_  _ _ _  _ _ _  _  | | | |
- | _ \ || | ' \| ' \ || | |_| |_|
- |___/\_,_|_||_|_||_\_, | (_) (_)
-                    |__/
+      ___           ___           ___                         ___     
+     /\  \         /\  \         /\  \          ___          /\  \    
+     \:\  \       /::\  \       /::\  \        /\  \        /::\  \   
+      \:\  \     /:/\:\  \     /:/\:\  \       \:\  \      /:/\:\  \  
+  _____\:\  \   /:/  \:\  \   /:/ /::\  \       \:\  \    /:/ /::\  \ 
+ /::::::::\__\ /:/__/ \:\__\ /:/_/:/\:\__\  ___  \:\__\  /:/_/:/\:\__\
+ \:\~~\~~\/__/ \:\  \ /:/  / \:\/:/  \/__/ /\  \ |:|  |  \:\/:/  \/__/
+  \:\  \        \:\  /:/  /   \::/__/      \:\  \|:|  |   \::/__/     
+   \:\  \        \:\/:/  /     \:\  \       \:\__|:|__|    \:\  \     
+    \:\__\        \::/  /       \:\__\       \::::/__/      \:\__\    
+     \/__/         \/__/         \/__/        ~~~~           \/__/    
 
 *
 * MIT License
 * ===========
 *
-* Copyright (c) 2020 BunnyFinance
+* Copyright (c) 2020 NoavaFinance
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -34,25 +40,43 @@ pragma experimental ABIEncoderV2;
 */
 
 interface IVaultCollateral {
-    function WITHDRAWAL_FEE_PERIOD() external view returns (uint);
-    function WITHDRAWAL_FEE_UNIT() external view returns (uint);
-    function WITHDRAWAL_FEE() external view returns (uint);
+    function WITHDRAWAL_FEE_PERIOD() external view returns (uint256);
+
+    function WITHDRAWAL_FEE_UNIT() external view returns (uint256);
+
+    function WITHDRAWAL_FEE() external view returns (uint256);
 
     function stakingToken() external view returns (address);
-    function collateralValueMin() external view returns (uint);
 
-    function balance() external view returns (uint);
-    function availableOf(address account) external view returns (uint);
-    function collateralOf(address account) external view returns (uint);
-    function realizedInETH(address account) external view returns (uint);
-    function depositedAt(address account) external view returns (uint);
+    function collateralValueMin() external view returns (uint256);
 
-    function addCollateral(uint amount) external;
+    function balance() external view returns (uint256);
+
+    function availableOf(address account) external view returns (uint256);
+
+    function collateralOf(address account) external view returns (uint256);
+
+    function realizedInETH(address account) external view returns (uint256);
+
+    function depositedAt(address account) external view returns (uint256);
+
+    function addCollateral(uint256 amount) external;
+
     function addCollateralETH() external payable;
+
     function removeCollateral() external;
 
-    event CollateralAdded(address indexed user, uint amount);
-    event CollateralRemoved(address indexed user, uint amount, uint profitInETH);
-    event CollateralUnlocked(address indexed user, uint amount, uint profitInETH, uint lossInETH);
-    event Recovered(address token, uint amount);
+    event CollateralAdded(address indexed user, uint256 amount);
+    event CollateralRemoved(
+        address indexed user,
+        uint256 amount,
+        uint256 profitInETH
+    );
+    event CollateralUnlocked(
+        address indexed user,
+        uint256 amount,
+        uint256 profitInETH,
+        uint256 lossInETH
+    );
+    event Recovered(address token, uint256 amount);
 }
