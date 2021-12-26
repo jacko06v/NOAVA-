@@ -122,7 +122,7 @@ contract NoavaMinterV2 is INoavaMinterV2, OwnableUpgradeable {
         address _token,
         ZapBSC _zap,
         IPriceCalculator _pricecal,
-        address _pair,
+        address _pool,
         address _lock,
         address _feeBox,
         address _deployer
@@ -130,7 +130,7 @@ contract NoavaMinterV2 is INoavaMinterV2, OwnableUpgradeable {
         WITHDRAWAL_FEE_FREE_PERIOD = 3 days;
         WITHDRAWAL_FEE = 50;
         PERFORMANCE_FEE = 3000;
-        NOAVA_POOL_V1 = _pair;
+        NOAVA_POOL_V1 = _pool;
         FEE_BOX = _feeBox;
         TIMELOCK = _lock;
         DEPLOYER = _deployer;
@@ -210,14 +210,10 @@ contract NoavaMinterV2 is INoavaMinterV2, OwnableUpgradeable {
     /* ========== VIEWS ========== */
 
     function isMinter(address account) public view override returns (bool) {
-        console.log("isMinter?");
-        console.log(NOAVA);
         if (IBEP20(NOAVA).getOwner() != address(this)) {
-            console.log("false");
             return false;
         }
 
-        console.log(_minters[account]);
         bool isTrue = _minters[account];
         return isTrue;
     }
@@ -228,10 +224,6 @@ contract NoavaMinterV2 is INoavaMinterV2, OwnableUpgradeable {
         override
         returns (uint256)
     {
-        console.log(priceCalculator.priceOfBNB());
-        console.log(priceCalculator.priceOfNoava());
-        console.log(floatingRateEmission());
-
         return
             bnbProfit
                 .mul(priceCalculator.priceOfBNB())
@@ -272,7 +264,6 @@ contract NoavaMinterV2 is INoavaMinterV2, OwnableUpgradeable {
         override
         returns (uint256)
     {
-        console.log("ciao");
         return profit.mul(PERFORMANCE_FEE).div(FEE_MAX);
     }
 
@@ -300,75 +291,58 @@ contract NoavaMinterV2 is INoavaMinterV2, OwnableUpgradeable {
         address to,
         uint256
     ) public payable override onlyMinter {
-        console.log("mint for 1");
         uint256 feeSum = _performanceFee.add(_withdrawalFee);
-        console.log("mint for 2");
+
         _transferAsset(asset, feeSum);
-        console.log("mint for 3");
 
         if (asset == NOAVA) {
-            console.log("mint for if 1");
             IBEP20(NOAVA).safeTransfer(DEAD, feeSum);
-            console.log("mint for if 2");
+
             return;
         }
-        console.log("mint for 4");
 
         bool marketBuy = shouldMarketBuy();
-        console.log("mint for 5");
+
         if (marketBuy == false) {
-            console.log("mint for if market");
             if (asset == address(0)) {
-                console.log("mint for if if asset");
                 // means BNB
                 SafeToken.safeTransferETH(FEE_BOX, feeSum);
-                console.log("mint for if if asset 2");
             } else {
-                console.log("mint for if else");
                 IBEP20(asset).safeTransfer(FEE_BOX, feeSum);
-                console.log("mint for if else 2");
             }
         } else {
-            console.log("mint for else");
             if (_withdrawalFee > 0) {
-                console.log("mint for else if");
                 if (asset == address(0)) {
                     // means BNB
-                    console.log("mint for else if if");
+
                     SafeToken.safeTransferETH(FEE_BOX, _withdrawalFee);
-                    console.log("mint for else if if 2");
                 } else {
-                    console.log("mint for else if else");
                     IBEP20(asset).safeTransfer(FEE_BOX, _withdrawalFee);
-                    console.log("mint for else if else 2");
                 }
             }
-            console.log("mint for else 1");
+
             if (_performanceFee == 0) return;
-            console.log("mint for else 1 after if");
+
             _marketBuy(asset, _performanceFee, to);
-            console.log("mint for else 2");
+
             _performanceFee = _performanceFee
                 .mul(floatingRateEmission().sub(1e18))
                 .div(floatingRateEmission());
-            console.log("mint for else 3");
         }
-        console.log("mint for uscito");
 
         (uint256 contributionInBNB, uint256 contributionInUSD) = priceCalculator
             .valueOfAsset(asset, _performanceFee);
-        console.log("mint for value ok");
+
         uint256 mintNoava = amountNoavaToMint(contributionInBNB);
-        console.log("mint for amount to mint ok");
+
         if (mintNoava == 0) return;
         _mint(mintNoava, to);
 
         if (marketBuy) {
-            console.log("sbaglia proprio qui");
             uint256 usd = contributionInUSD.mul(floatingRateEmission()).div(
                 floatingRateEmission().sub(1e18)
             );
-            console.log("ipotetico errore superato :(");
+
             emit PerformanceFee(asset, _performanceFee, usd);
         } else {
             emit PerformanceFee(asset, _performanceFee, contributionInUSD);
@@ -422,17 +396,14 @@ contract NoavaMinterV2 is INoavaMinterV2, OwnableUpgradeable {
         uint256 amount,
         address to
     ) private {
-        console.log("marketBuy");
         uint256 _initNoavaAmount = IBEP20(NOAVA).balanceOf(address(this));
-        console.log("marketBuy 1");
+
         if (asset == address(0)) {
-            console.log("marketBuy zap");
             zap.zapIn{value: amount}(NOAVA);
         } else if (
             keccak256(abi.encodePacked(IPancakePair(asset).symbol())) ==
             keccak256("Cake-LP")
         ) {
-            console.log("marketBuy cake-lp");
             if (IBEP20(asset).allowance(address(this), address(router)) == 0) {
                 IBEP20(asset).safeApprove(address(router), uint256(-1));
             }
@@ -472,11 +443,8 @@ contract NoavaMinterV2 is INoavaMinterV2, OwnableUpgradeable {
                 zap.zapInToken(token1, amountToken1, NOAVA);
             }
         } else {
-            console.log("marketBuy else");
             if (IBEP20(asset).allowance(address(this), address(zap)) == 0) {
-                console.log("marketBuy else if");
                 IBEP20(asset).safeApprove(address(zap), uint256(-1));
-                console.log("marketBuy else if 1");
             }
 
             zap.zapInToken(asset, amount, NOAVA);

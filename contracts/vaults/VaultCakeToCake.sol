@@ -250,37 +250,31 @@ contract VaultCakeToCake is VaultController, IStrategy {
     }
 
     function getReward() external override {
-        console.log("1");
         uint256 amount = earned(msg.sender);
         uint256 shares = Math.min(
             amount.mul(totalShares).div(balance()),
             _shares[msg.sender]
         );
-        console.log("2");
+
         totalShares = totalShares.sub(shares);
         _shares[msg.sender] = _shares[msg.sender].sub(shares);
         _cleanupIfDustShares();
-        console.log("3");
 
         uint256 cakeHarvested = _withdrawStakingToken(amount);
-        console.log("3.1");
+
         uint256 depositTimestamp = _depositedAt[msg.sender];
-        console.log("3.2");
+
         address minter = address(_minter);
-        console.log(minter);
+
         uint256 performanceFee;
         if (canMint()) {
-            console.log("if true");
             performanceFee = _minter.performanceFee(amount);
         } else {
-            console.log("if false");
             performanceFee = 0;
         }
         // uint256 performanceFee = canMint() ? _minter.performanceFee(amount) : 0;
 
-        console.log(performanceFee);
         if (performanceFee > DUST) {
-            console.log("5");
             _minter.mintFor(
                 address(CAKE),
                 0,
@@ -290,9 +284,9 @@ contract VaultCakeToCake is VaultController, IStrategy {
             );
             amount = amount.sub(performanceFee);
         }
-        console.log("6");
+
         CAKE.safeTransfer(msg.sender, amount);
-        console.log("7");
+
         emit ProfitPaid(msg.sender, amount, performanceFee);
 
         _harvest(cakeHarvested);

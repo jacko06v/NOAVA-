@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol";
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
+import "hardhat/console.sol";
 import "../library/RewardsDistributionRecipientUpgradeable.sol";
 import "../library/PausableUpgradeable.sol";
 import "../interfaces/legacy/IStrategyHelper.sol";
@@ -16,7 +16,7 @@ import "../interfaces/legacy/IStrategyLegacy.sol";
 contract NoavaPool is
     IStrategyLegacy,
     RewardsDistributionRecipientUpgradeable,
-    ReentrancyGuardUpgradeable,
+    ReentrancyGuard,
     PausableUpgradeable
 {
     using SafeMath for uint256;
@@ -62,8 +62,10 @@ contract NoavaPool is
             "Pool: stakingToken must be set"
         );
         stakingToken = _stakingToken;
+
         stakingToken.safeApprove(address(ROUTER), type(uint256).max);
         address wbnb = ROUTER.WETH();
+
         IBEP20(wbnb).safeApprove(address(ROUTER), type(uint256).max);
 
         __Ownable_init();
@@ -307,6 +309,7 @@ contract NoavaPool is
         );
 
         rewardsToken = IBEP20(_rewardsToken);
+
         IBEP20(_rewardsToken).safeApprove(address(ROUTER), type(uint256).max);
     }
 

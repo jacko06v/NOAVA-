@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const { time } = require("@openzeppelin/test-helpers");
 const { boolean } = require("hardhat/internal/core/params/argumentTypes");
 const { default: BigNumber } = require("bignumber.js");
+const ether = require("@openzeppelin/test-helpers/src/ether");
 
 const cyan = "\x1b[36m%s\x1b[0m";
 const yellow = "\x1b[33m%s\x1b[0m";
@@ -42,6 +43,10 @@ describe("OVRLand Renting - TEST", () => {
   let pairAddr
   let Lock, lock;
   let Box, box;
+  let Pool, pool;
+  let Vault, vault;
+  let Helper, helper;
+  let wbnbT
 
   let Token, token;
   let wbnbAddr = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"
@@ -71,6 +76,9 @@ describe("OVRLand Renting - TEST", () => {
     pair =  await ethers.getContractFactory("PancakePair1");
     Lock = await ethers.getContractFactory("Timelock");
     Box = await ethers.getContractFactory("NoavaFeeBox");
+    Helper = await ethers.getContractFactory("StrategyHelperV1");
+    Pool = await ethers.getContractFactory("NoavaPool");
+    Vault = await ethers.getContractFactory("VaultNoava");
     [
       owner, // 50 ether
       addr1, // 0
@@ -102,6 +110,14 @@ describe("OVRLand Renting - TEST", () => {
 
   describe("Should deploy", () => {
 
+    it("deploy helper", async () => {
+      helper = await Helper.deploy();
+      await helper.deployed();
+      console.debug(`\t\t\thelper Contract Address: ${cyan}`, helper.address);
+     
+  });
+
+
     it("deploy lock", async () => {
       lock = await Lock.deploy(owner.address, 1123200);
       await lock.deployed();
@@ -119,6 +135,7 @@ describe("OVRLand Renting - TEST", () => {
         const supply = await token.totalSupply()
         console.debug(`\t\t\tToken totalSupply: ${yellow}`, supply);
     });
+    
 
     it("Should create factory", async () => {
       factory = await hre.ethers.getContractAt("PancakeFactory", factoryAddr);
@@ -153,11 +170,25 @@ describe("OVRLand Renting - TEST", () => {
         minter = await Minter.deploy();
         await minter.deployed();
         console.debug(`\t\t\tMinter Contract Address: ${cyan}`, minter.address);
+        
         await token.transferOwnership(minter.address)
         const tokenOwner = await token.owner();
         console.debug(`\t\t\tToken Owner Address: ${cyan}`, tokenOwner);
         await  chef.setMinter(minter.address)
+        
     });
+    it("deploy vaultNoava", async () => {
+      vault = await Vault.deploy();
+      await helper.deployed();
+      console.debug(`\t\t\thelper Contract Address: ${cyan}`, helper.address);
+      console.debug(`\t\t\thelper Contract Address: ${yellow}`, minter.address);
+      console.debug(`\t\t\thelper Contract Address: ${yellow}`, await token.getOwner());
+      await vault.initialize(token.address)
+     await vault.setMinter(minter.address)
+      await vault.setNoavaChef(chef.address)
+     
+     
+  });
     it("deploy cake2cake", async () => {
       cake2cake = await Cake2cake.deploy();
       await cake2cake.deployed();
@@ -180,6 +211,7 @@ describe("OVRLand Renting - TEST", () => {
       cake = await hre.ethers.getContractAt("CakeToken", cakeAddr);
 
       router = await hre.ethers.getContractAt("PancakeRouter", routerAddr);
+      wbnbT = await hre.ethers.getContractAt("NoavaToken", "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c");
     });
     
     it("should add liq", async () => {
@@ -232,7 +264,6 @@ describe("OVRLand Renting - TEST", () => {
    console.debug(`\t\t\tPRICE: ${yellow}`, price2);
 
       
-     
       
     });
     it("deploy feeBox", async () => {
@@ -242,11 +273,28 @@ describe("OVRLand Renting - TEST", () => {
       console.debug(`\t\t\tbox Contract Address: ${cyan}`, box.address);
      
   });
+  it("deploy pool", async () => {
+    const Pair = await hre.ethers.getContractAt("PancakePair1", pairAddr); 
+    const balance = await Pair.balanceOf(owner.address);
+    pool = await Pool.deploy();
+    await pool.deployed();
+    console.debug(`\t\t\tpool Contract Address: ${cyan}`, pool.address);
+    await pool.initialize(token.address, box.address)
+    await pool.setRewardsToken(pairAddr)
+    await pool.setHelper(helper.address)
+    
+    await Pair.transfer(pool.address, balance);
+     
+   
+});
   it("init minter", async () => {
     await minter.initialize(token.address, zap.address, pricecal.address,pairAddr, lock.address, box.address, owner.address)
       console.debug(`\t\t\tMinter ${cyan} initialized`);
      await minter.setMinter(cake2cake.address, true) 
      console.debug(`\t\t\tMinter ${cyan} cake setted on minter`);
+     await minter.setMinter(vault.address, true) 
+     console.debug(`\t\t\tMinter ${cyan} vault setted on minter`);
+     await minter.setNoavaChef(chef.address)
    
 });
   });
@@ -352,25 +400,98 @@ describe("allowance", () => {
     console.debug("\t\t\tOWNER earned Balance:", earned.toString());
     await time.increase(DAY * 30);
     });
-    it("transfer to addr1", async () => {
-
+    
+    it("approve owner token on pool", async () => {
+      await token.approve(pool.address, BigInt(123456789876543212345664544334556654))
+      console.debug(`\t\t\towner approved the pool`)
+    })
+    it("deposit on pool", async () => {
       let tokenbalance = await token.balanceOf(owner.address)
       tokenbalance = tokenbalance/2
+      await pool.deposit(BigInt(tokenbalance))
+      console.debug(`\t\t\towner deposited on pool`)
+    })
+    it("get reward from pool", async () => {
 
-      
-      
-      
+      await time.increase(DAY * 30);
+      let balance = await provider.getBalance(owner.address);
+      console.debug("\t\t\tOWNER ETH Balance:", balance.toString());
+    let tokenBalance = await token.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER token Balance:", tokenBalance.toString());
+    let wbnbBalance = await wbnbT.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER wbnb Balance:", wbnbBalance.toString());
+    console.log("--------------------------------------------------")
+      await pool.getReward()
+      console.debug(`\t\t\towner got reward from pool`)
+      console.log("--------------------------------------------------")
+       balance = await provider.getBalance(owner.address);
+      console.debug("\t\t\tOWNER ETH Balance:", balance.toString());
+     tokenBalance = await token.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER token Balance:", tokenBalance.toString());
+     wbnbBalance = await wbnbT.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER wbnb Balance:", wbnbBalance.toString());
+    })
+    it("get reward from pool", async () => {
 
-      await token.connect(owner).transfer(addr1.address,  BigInt(tokenbalance))
-    const tokenBalance = await token.balanceOf(addr1.address);
-  
-    console.debug(`\t\t\taddr1 token balance: ${yellow}`, tokenBalance);
-  
-    });
+      await time.increase(DAY * 30);
+      let balance = await provider.getBalance(owner.address);
+      console.debug("\t\t\tOWNER ETH Balance:", balance.toString());
+    let tokenBalance = await token.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER token Balance:", tokenBalance.toString());
+    let wbnbBalance = await wbnbT.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER wbnb Balance:", wbnbBalance.toString());
+    console.log("--------------------------------------------------")
+      await pool.getReward()
+      console.debug(`\t\t\towner got reward from pool`)
+      console.log("--------------------------------------------------")
+       balance = await provider.getBalance(owner.address);
+      console.debug("\t\t\tOWNER ETH Balance:", balance.toString());
+     tokenBalance = await token.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER token Balance:", tokenBalance.toString());
+     wbnbBalance = await wbnbT.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER wbnb Balance:", wbnbBalance.toString());
+    })
+    it("approve owner token on pool", async () => {
+      await chef.addVault(vault.address, token.address, 100)
+      await token.approve(vault.address, BigInt(123456789876543212345664544334556654))
+      console.debug(`\t\t\towner approved the vault`)
+    })
+    it("deposit on vault", async () => {
+      await vault.depositAll()
+      console.debug(`\t\t\towner deposited on vault`)
+    })
+    it("get reward from vault", async () => {
+
+      await time.increase(DAY * 30);
+      let balance = await provider.getBalance(owner.address);
+      console.debug("\t\t\tOWNER ETH Balance:", balance.toString());
+    let tokenBalance = await token.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER token Balance:", tokenBalance.toString());
+    console.log("--------------------------------------------------")
+      await vault.getReward()
+      console.debug(`\t\t\towner got reward from vault`)
+      console.log("--------------------------------------------------")
+       balance = await provider.getBalance(owner.address);
+      console.debug("\t\t\tOWNER ETH Balance:", balance.toString());
+     tokenBalance = await token.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER token Balance:", tokenBalance.toString());
+    })
+    it("get reward from vault", async () => {
+
+      await time.increase(DAY * 30);
+      let balance = await provider.getBalance(owner.address);
+      console.debug("\t\t\tOWNER ETH Balance:", balance.toString());
+    let tokenBalance = await token.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER token Balance:", tokenBalance.toString());
+    console.log("--------------------------------------------------")
+      await vault.getReward()
+      console.debug(`\t\t\towner got reward from vault`)
+      console.log("--------------------------------------------------")
+       balance = await provider.getBalance(owner.address);
+      console.debug("\t\t\tOWNER ETH Balance:", balance.toString());
+     tokenBalance = await token.balanceOf(owner.address);
+    console.debug("\t\t\tOWNER token Balance:", tokenBalance.toString());
+    })
   });
-
-  
-
-
 
 });

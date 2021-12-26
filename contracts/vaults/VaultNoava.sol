@@ -57,7 +57,7 @@ contract VaultNoava is VaultController, IStrategy, ReentrancyGuardUpgradeable {
 
     /* ========== CONSTANTS ============= */
 
-    address private constant NOAVA = 0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51;
+    address private NOAVA;
     PoolConstant.PoolTypes public constant override poolType =
         PoolConstant.PoolTypes.Noava;
 
@@ -70,8 +70,9 @@ contract VaultNoava is VaultController, IStrategy, ReentrancyGuardUpgradeable {
 
     /* ========== INITIALIZER ========== */
 
-    function initialize() external initializer {
-        __VaultController_init(IBEP20(NOAVA));
+    function initialize(address _noava) external initializer {
+        NOAVA = _noava;
+        __VaultController_initi(IBEP20(NOAVA), NOAVA);
         __ReentrancyGuard_init();
     }
 

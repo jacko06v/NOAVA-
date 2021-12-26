@@ -87,7 +87,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: `https://autumn-crimson-sun.bsc.quiknode.pro/ee6b7517d86a347cffbf8bfcef1339e5a1cc28cf/`,
+        url: `https://speedy-nodes-nyc.moralis.io/45ec3dcc81ab488805242de1/bsc/mainnet`,
       },
     },
     "matic-mumbai": {

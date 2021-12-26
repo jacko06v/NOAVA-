@@ -119,18 +119,15 @@ contract ZapBSC is IZap, OwnableUpgradeable {
         uint256 amount,
         address _to
     ) external override {
-        console.log("zapin");
         IBEP20(_from).safeTransferFrom(msg.sender, address(this), amount);
-        console.log("zapin 1");
+
         _approveTokenIfNeeded(_from);
-        console.log("zapin 2");
 
         if (isFlip(_to)) {
-            console.log("zapin if");
             IPancakePair pair = IPancakePair(_to);
             address token0 = pair.token0();
             address token1 = pair.token1();
-            console.log("zapin if 2");
+
             if (_from == token0 || _from == token1) {
                 // swap half amount for other
                 address other = _from == token0 ? token1 : token0;
@@ -160,9 +157,7 @@ contract ZapBSC is IZap, OwnableUpgradeable {
                 _swapBNBToFlip(_to, bnbAmount, msg.sender);
             }
         } else {
-            console.log("zapin else");
             _swap(_from, amount, _to, msg.sender);
-            console.log("zapin else 2");
         }
     }
 
@@ -337,16 +332,13 @@ contract ZapBSC is IZap, OwnableUpgradeable {
         address _to,
         address receiver
     ) private returns (uint256) {
-        console.log("zap swap");
         address intermediate = routePairAddresses[_from];
         if (intermediate == address(0)) {
-            console.log("zap swap if");
             intermediate = routePairAddresses[_to];
         }
-        console.log("zap swap 2");
+
         address[] memory path;
         if (intermediate != address(0) && (_from == WBNB || _to == WBNB)) {
-            console.log("zap swap 2 if");
             // [WBNB, BUSD, VAI] or [VAI, BUSD, WBNB]
             path = new address[](3);
             path[0] = _from;
@@ -356,7 +348,6 @@ contract ZapBSC is IZap, OwnableUpgradeable {
             intermediate != address(0) &&
             (_from == intermediate || _to == intermediate)
         ) {
-            console.log("zap swap 2 elseif 1");
             // [VAI, BUSD] or [BUSD, VAI]
             path = new address[](2);
             path[0] = _from;
@@ -365,7 +356,6 @@ contract ZapBSC is IZap, OwnableUpgradeable {
             intermediate != address(0) &&
             routePairAddresses[_from] == routePairAddresses[_to]
         ) {
-            console.log("zap swap 2 elseif 2");
             // [VAI, DAI] or [VAI, USDC]
             path = new address[](3);
             path[0] = _from;
@@ -376,7 +366,6 @@ contract ZapBSC is IZap, OwnableUpgradeable {
             routePairAddresses[_to] != address(0) &&
             routePairAddresses[_from] != routePairAddresses[_to]
         ) {
-            console.log("zap swap 2 elseif 3");
             // routePairAddresses[xToken] = xRoute
             // [VAI, BUSD, WBNB, xRoute, xToken]
             path = new address[](5);
@@ -389,7 +378,6 @@ contract ZapBSC is IZap, OwnableUpgradeable {
             intermediate != address(0) &&
             routePairAddresses[_from] != address(0)
         ) {
-            console.log("zap swap 2 elseif 4");
             // [VAI, BUSD, WBNB, NOAVA]
             path = new address[](4);
             path[0] = _from;
@@ -399,7 +387,6 @@ contract ZapBSC is IZap, OwnableUpgradeable {
         } else if (
             intermediate != address(0) && routePairAddresses[_to] != address(0)
         ) {
-            console.log("zap swap 2 elseif 5");
             // [NOAVA, WBNB, BUSD, VAI]
             path = new address[](4);
             path[0] = _from;
@@ -407,20 +394,17 @@ contract ZapBSC is IZap, OwnableUpgradeable {
             path[2] = intermediate;
             path[3] = _to;
         } else if (_from == WBNB || _to == WBNB) {
-            console.log("zap swap 2 elseif 6");
             // [WBNB, NOAVA] or [NOAVA, WBNB]
             path = new address[](2);
             path[0] = _from;
             path[1] = _to;
         } else {
-            console.log("zap swap 2 else");
             // [USDT, NOAVA] or [NOAVA, USDT]
             path = new address[](3);
             path[0] = _from;
             path[1] = WBNB;
             path[2] = _to;
         }
-        console.log("zap swap 3");
 
         uint256[] memory amounts = ROUTER.swapExactTokensForTokens(
             amount,

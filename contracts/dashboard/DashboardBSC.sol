@@ -49,7 +49,7 @@ import "../interfaces/INoavaMinter.sol";
 import "../interfaces/INoavaChef.sol";
 import "../interfaces/IPriceCalculator.sol";
 
-import "../vaults/NoavaPool.sol";
+import "../vaults/NoavaPoolP.sol";
 import "../vaults/venus/VaultVenus.sol";
 import "../vaults/relay/VaultRelayer.sol";
 

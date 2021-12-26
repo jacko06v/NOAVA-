@@ -60,7 +60,7 @@ abstract contract VaultController is
     using SafeBEP20 for IBEP20;
 
     /* ========== CONSTANT VARIABLES ========== */
-    BEP20 private NOAVA = BEP20(0xC9849E6fdB743d08fAeE3E34dd2D1bc69EA11a51);
+    BEP20 private NOAVA;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -98,6 +98,18 @@ abstract contract VaultController is
         _stakingToken = token;
     }
 
+    function __VaultController_initi(IBEP20 token, address noava)
+        internal
+        initializer
+    {
+        __PausableUpgradeable_init();
+        NOAVA = BEP20(noava);
+        __WhitelistUpgradeable_init();
+
+        keeper = 0x793074D9799DC3c6039F8056F1Ba884a73462051;
+        _stakingToken = token;
+    }
+
     function setToken(BEP20 _token) public onlyOwner {
         NOAVA = _token;
     }
@@ -109,7 +121,6 @@ abstract contract VaultController is
     }
 
     function canMint() internal view returns (bool) {
-        console.log("can mint");
         return
             address(_minter) != address(0) && _minter.isMinter(address(this));
     }
@@ -134,6 +145,7 @@ abstract contract VaultController is
 
     function setMinter(address newMinter) public virtual onlyOwner {
         // can zero
+
         if (newMinter != address(0)) {
             require(
                 newMinter == NOAVA.getOwner(),
